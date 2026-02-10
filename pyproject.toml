@@ -1,0 +1,22 @@
+[build-system]
+requires = ["uv_build>=0.9.5,<0.10.0"]
+build-backend = "uv_build"
+
+[project]
+name = "Data3GC"
+version = "0.0.1"
+description = "Data formats for third-generation calibration"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "astropy>=7.2.0",
+    "matplotlib>=3.10.8",
+    "numpy>=2.4.2",
+    "python-casacore>=3.7.1",
+    "regions>=0.11",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
