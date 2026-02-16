@@ -13,11 +13,15 @@ test_sky = Sky(skyname="OJ287",
                npix=1000,
                cellsize=0.1*u.arcsec,
                freqs=[144e6*u.MHz],
-               nfacets=21,
+               nfacets=11,
                stokes="I"
 )
 
-test_sky.show()
+show_facets = [85,86,88,75,76,74,55,51]
+
+#test_sky.show()
+
+test_sky.show(facets=show_facets)
 
 
 print(test_sky)

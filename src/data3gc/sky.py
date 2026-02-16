@@ -41,16 +41,35 @@ class Sky:
         print(self.phasecenter.to_string('hmsdms'))
         return f"Sky({self.name}, ({self.phasecenter.to_string('hmsdms')}), {self.nfacets} facets"
 
-    def show(self):
+    def show(self,
+             data=None | np.ndarray ,
+             facets: list | str="all",
+             vmin: float=-8.e-5,
+             vmax: float=2.e-4
+             ):
         # this should imshow the sky and its divisions.
-        self.restored.data = fits.open("/home/ebonnassieux/OJ287_averaged_outer_uvcut_0.8arcsec-MFS-image.fits")[0].data
+        if data==None:
+            data=self.restored.data
+        data = fits.open("/home/ebonnassieux/OJ287_averaged_outer_uvcut_0.8arcsec-MFS-image.fits")[0].data
+        # set up the plot axes etc
         fig, ax = plt.subplots(subplot_kw=dict(projection=self.gridwcs))
-        ax.imshow(self.restored.data[0,0,:,:], vmin=-8.e-5, vmax=2.e-4, origin='lower')
-        ax.grid(color='white', ls='solid')
         ax.set(xlabel='Right Ascension', ylabel='Declination',title=self.name)
+        if facets=="all":
+            ax.imshow(data[0,0,:,:], vmin=vmin, vmax=vmax, origin='lower')
+            #ax.grid(color='white', ls='solid')
+            self.grid_reg.plot(ax=ax)
+            for facet_reg in self.facet_grid_regs:
+                facet_reg.plot(ax=ax)
+        else:
+            totalmask=np.zeros_like(data).astype(bool)
+            for ifacet in facets:
+                regmask = self.facet_sky_regs[ifacet].contains(wcs=self.gridwcs,skycoord=self.skycoords)
+                totalmask = totalmask + regmask
+                self.facet_grid_regs[ifacet].plot(ax=ax)
+            self.grid_reg.plot(ax=ax)
+            data = data*totalmask
+            ax.imshow(data[0,0,:,:], vmin=vmin, vmax=vmax, origin='lower')
         self.grid_reg.plot(ax=ax)
-        for facet_reg in self.facet_grid_regs:
-            facet_reg.plot(ax=ax)
         plt.show()
 
     ### constructor
