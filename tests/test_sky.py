@@ -13,6 +13,12 @@ test_sky = Sky(skyname="OJ287",
                npix=1000,
                cellsize=0.1*u.arcsec,
                freqs=[144e6*u.MHz],
-               nfacets=11,
+               nfacets=21,
                stokes="I"
 )
+
+test_sky.show()
+
+
+print(test_sky)
+test_sky.close()

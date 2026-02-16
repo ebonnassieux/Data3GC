@@ -1,63 +1,238 @@
 # class containing sky properties for 3GC
 # core dependencies:
 # numpy
-# regions
 # astropy
-# python-casacore
 # matplotlib
+# regions
 
 import numpy as np
-import regions
+# astropy functions
 import astropy.units as u
 from astropy.coordinates import SkyCoord
 from astropy.wcs import WCS
 from astropy.io import fits
+# for diagnostic plots
 import matplotlib.pyplot as plt
-from casacore.images import image
-### needed due to way we construct WCS
-import os
+# for region functionalities
+import regions
+
+
+type StokesEigen = Literal['I','Q','U','V']
+
+from typing import Literal
+type Stokes = StokesEigen | tuple[StokesEigen] | tuple[StokesEigen, StokesEigen] | tuple[StokesEigen, StokesEigen, StokesEigen] | tuple[StokesEigen, StokesEigen, StokesEigen, StokesEigen]
 
 class Sky:
+    '''
+    A class represenging the Sky that we want to work with.
+    Attributes:
+        centrecoords
+        npix
+        cellsize
+        freqs
+        nfacets
+        stokes
+        skyname
+        facets
+    '''
+    def __str__(self):
+        # figure out what the print for the function returns.
+        # Name, coords, resolution, shape?
+        print(self.phasecenter.to_string('hmsdms'))
+        return f"Sky({self.name}, ({self.phasecenter.to_string('hmsdms')}), {self.nfacets} facets"
+
+    def show(self):
+        # this should imshow the sky and its divisions.
+        self.restored.data = fits.open("/home/ebonnassieux/OJ287_averaged_outer_uvcut_0.8arcsec-MFS-image.fits")[0].data
+        fig, ax = plt.subplots(subplot_kw=dict(projection=self.gridwcs))
+        ax.imshow(self.restored.data[0,0,:,:], vmin=-8.e-5, vmax=2.e-4, origin='lower')
+        ax.grid(color='white', ls='solid')
+        ax.set(xlabel='Right Ascension', ylabel='Declination',title=self.name)
+        self.grid_reg.plot(ax=ax)
+        for facet_reg in self.facet_grid_regs:
+            facet_reg.plot(ax=ax)
+        plt.show()
+
     ### constructor
     def __init__(self,
-                 skyname: str,
-                 centrecoords: SkyCoord,
-                 npix: int,
-                 cellsize: u.Quantity,
-                 freqs: list[u.Quantity],
-                 nfacets:int,
-                 stokes: list[str]="I"
+                 centrecoords : SkyCoord,
+                 npix         : int,
+                 cellsize     : u.Quantity,
+                 freqs        : list[u.Quantity],
+                 nfacets      : int,
+                 stokes       : Stokes="I",
+                 skyname      : str="Sky",
                  ):
         # initialise global sky variables
-        self.name = skyname
-        self.phasecenter=centrecoords
-        self.npix = npix
-        self.cellsize = cellsize
-        self.freqs = freqs
-        self.stokes = stokes
-        self.nfacets = nfacets
+        self.name        = skyname
+        self.phasecenter = centrecoords
+        self.npix        = npix
+        self.cellsize    = cellsize
+        self.freqs       = freqs
+        self.stokes      = stokes
+        self.nfacets     = nfacets
         # initialise image grid variables
         # base shape on xradio schema 
         # https://github.com/casangi/xradio/blob/470-changes-needed-for-astroviper/docs/source/image_data/tutorials/image_schema_proposal.ipynb
-        self.imshape = (len(freqs),len(stokes),npix, npix)
-        self.coords  = np.meshgrid(1,1) # TODO get RA, Dec coordinate array explicitly here.        
-        self.wcs  = WCS(self.wcs_input_dict())
-#        print(self.wcs)
-#        stop
-        self.data = np.zeros(self.imshape)
-        self.data = fits.open("/home/ebonnassieux/OJ287_averaged_outer_uvcut_0.8arcsec-MFS-image.fits")[0].data
-        self.hdu = fits.PrimaryHDU(data=self.data, header=self.wcs.to_header())
-        self.hdu.writeto('example.fits',overwrite=True)
+        self.imshape = (len(freqs),len(stokes),npix, npix)      
+        self.wcs     = WCS(self.wcs_input_dict())
+        self.gridwcs = self.wcs.dropaxis(2).dropaxis(2)
+        # initialise the data grids
+        ### TODO: define these as shared xarrays?
+        ### TODO: define specific shared-xarray image format?
+        self.restored = self.ImageHDU("restored",
+                                      np.zeros(self.imshape),
+                                      self.wcs)
+        self.residual = self.ImageHDU("residual",
+                                      np.zeros(self.imshape),
+                                      self.wcs)
+        self.model    = self.ImageHDU("model",
+                                      np.zeros(self.imshape),
+                                      self.wcs)
+        self.mask     = self.ImageHDU("mask",
+                                      np.zeros(self.imshape),
+                                      self.wcs)
+        # Initialise the coordinate grids in ra, dec and l,m
+        coordgrid = np.meshgrid(np.arange(self.npix),np.arange(self.npix))
+        # drop the Stokes, Freq axes for this
+        self.ras, self.decs = self.gridwcs.all_pix2world(coordgrid[0],coordgrid[1],1)*u.deg
+        # defin RA, Dec and l,m coords
+        self.skycoords = SkyCoord(self.ras,self.decs)
+        self.l,self.m  = self.radec2lm_scalar(self.skycoords,self.phasecenter)
+        # initialise regions
+        self.sky_reg,self.grid_reg = self.region()
+        # initialise facet properties
+        self.facet_phasecenters = self.generate_facet_phasecenters()
+        self.facet_npix         = self.generate_facet_npix()
 
-        stop
+        self.facet_sky_regs,self.facet_grid_regs = self.generate_facet_regions()
 
-#        self.cell = [cellsize, cellsize]
-#        self.imdata = self.CasaImageInitialise("data")
+
+    def radec2lm_scalar(self,
+                        coords      : SkyCoord,
+                        phasecenter : None | SkyCoord = None,
+                        ):
+        # based on DDF function
+        '''
+        Docstring for radec2lm_scalar
+        
+        Function based on DDFacet to generate l,m coordinates from RA, Dec SkyCoord
+
+        :param self: based on Sky class
+        :param coords: input SkyCoord array object for the full grid 
+        :type coords: SkyCoord
+        :param phasecenter: Phase center from which to compute l,m values
+        :type phasecenter: None | SkyCoord
+        '''
+        if phasecenter==None:
+            phasecenter = self.phasecenter
+        refra = self.phasecenter.ra.rad
+        refdec = self.phasecenter.dec.rad
+        ras    = coords.ra.rad
+        decs   = coords.dec.rad
+        l = np.cos(decs) * np.sin(ras - refra)
+        m = np.sin(decs) * np.cos(refdec) - np.cos(decs) * np.sin(refra) * np.cos(ras - refra)
+        return l,m
+    
+    def generate_facet_phasecenters(self):
+        bin_edges   = np.linspace(0,self.npix,self.nfacets+1).astype(int)
+        bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2).astype(int)
+        facet_centre_grid = np.meshgrid(bin_centers,bin_centers)
+        facet_ras, facet_decs = self.gridwcs.all_pix2world(facet_centre_grid[0].ravel(),facet_centre_grid[1].ravel(),1)*u.deg
+        return SkyCoord(facet_ras, facet_decs)
+    
+    def generate_facet_npix(self):
+        bin_edges   = np.linspace(0,self.npix,self.nfacets+1).astype(int)
+        bin_size    = int(np.mean(bin_edges[1:] - bin_edges[:-1]))
+        return bin_size
+    
+    def generate_facet_regions(self):
+        reg_visuals = {'color':"red",
+                       'linewidth':1}
+        facet_grid_regs = []
+        facet_sky_regs  = []
+        # returns region coverage of the sky. Used for overlap determinations.
+        for i in range(len(self.facet_phasecenters)):
+            sky_reg  = regions.RectangleSkyRegion(center=self.facet_phasecenters[i], 
+                                                  width=self.cellsize*self.facet_npix, 
+                                                  height=self.cellsize*self.facet_npix,
+                                                  visual=reg_visuals
+                                                  )
+            grid_reg = sky_reg.to_pixel(self.gridwcs)
+            facet_sky_regs.append(sky_reg)
+            facet_grid_regs.append(grid_reg)
+
+        return facet_sky_regs,facet_grid_regs
+
+    def close(self):
+        '''
+        Docstring for close
+        Close all HDU objects, free up virtual memory, exit gracefully.
+        '''
+        self.restored.close()
+        self.residual.close()
+        self.model.close()
+        self.mask.close()
+
+    def ImageHDU(self,
+                 name:str,
+                 data:np.ndarray,
+                 wcs:WCS
+                 ):
+        '''
+        Docstring for ImageHDU
+        
+        :param self: class Sky
+        :param name: Name of the HDU, restored, residual, model etc
+        :type name: str
+        :param data: data to put in the HDU
+        :type data: np.ndarray
+        :param wcs: WCS of the HDU
+        :type wcs: WCS
+        '''
+        this_hdu      = fits.PrimaryHDU(data:=data, 
+                                        header=wcs.to_header())
+        this_hdu.name = name
+        return this_hdu
+
+    def restoringbeam(self,
+                      bmaj:u.Quantity,
+                      bmin:u.Quantity,
+                      PA:float=0):
+        # restoring beam gaussian
+        # call as a function to initialise on-the-fly
+        self.bmaj=bmaj.rad
+        self.bmin=bmin.rad
+        self.PA=PA
+        test=1  
+
+    def region(self):
+        reg_visuals = {'color':"blue",
+                       'linewidth':5}
+        # returns region coverage of the sky. Used for overlap determinations.
+        sky_reg  = regions.RectangleSkyRegion(center=self.phasecenter, 
+                                              width=self.cellsize*self.npix, 
+                                              height=self.cellsize*self.npix,
+                                              visual=reg_visuals
+                                              )
+        grid_reg = sky_reg.to_pixel(self.gridwcs)
+        return sky_reg,grid_reg
+
+
+    def JonesRegions(self,njonesdir):
+        # generates tessels (Jones facets)
+        test=1
 
     def wcs_input_dict(self):
-        # reference pixel is defined as edge of image, first freq, first stokes
-        ref_pixels = [int(0.5*self.npix)+1,
-                      int(0.5*self.npix)+1,
+        '''
+        Docstring for wcs_input_dict
+        This is the dictionary which defines the default WCS for our Sky object.
+        
+        :param self: Sky class
+        '''
+        # reference pixel is defined as centre of image, first freq, first stokes
+        ref_pixels = [int(0.5*self.npix),
+                      int(0.5*self.npix),
                       1.,
                       1.]
                 
@@ -65,11 +240,8 @@ class Sky:
                       self.phasecenter.dec.to(u.deg).value,
                       self.freqs[0].value,
                       1.]
-
         ### based on wsclean header.
         ### TODO:
-        # check if header SIMPLE should be set to True
-        # check if header EXTEND should be set to True
         # check how to encode bandwidth properly...
         cdelt_deg = self.cellsize.to(u.deg).value
         wcs_input_dict = {
@@ -111,90 +283,23 @@ class Sky:
         }
         return wcs_input_dict
 
-    def CasaImageInitialise(self,imagename):
-        ### TODO: remove dependency on casa image. Looks very inefficient + source of errors + extra dependency.
-        tmpIm = image(imagename=self.name,
-                    shape=self.imshape)#, cell=self.cell, freq=self.freqs, stokes=self.stokes)
-        self.coords = tmpIm.coordinates()
-        del(tmpIm)
-        os.system("rm -Rf %s"%self.name)
-        # set coordinate increments to radians
-        increments = self.coords.get_increment()
-        # default casacore units are arcmin.
-        # TODO: do we need to divide the below by 60?
-        increments[-1]=[self.cellsize.to(u.radian),-self.cellsize.to(u.radian)] 
-        # default casacore units are arcmin. 
-        RefVal=self.coords.get_referencevalue()
-        RefVal[-1] = [self.phasecenter.ra.to(u.arcmin).value,
-                      self.phasecenter.dec.to(u.arcmin).value]
-        if self.freqs is not None:
-            RefVal[0]=self.freqs[0].value
-#            ich,ipol,xy=
-            print(self.coords.get_referencepixel())
-#            print(ich,ipol,xy)
-            stop
-            ich=0
-            c.set_referencepixel((ich,ipol,xy))
+    def debugWCS(self):
+        '''
+        Docstring for debugWCS
+        This is a function to test our WCS, for debug purposes
+        :param self: Description
+        '''
+        self.centrecoords=SkyCoord(133.703625*u.deg,20.1085*u.deg,frame="fk5")
+        self.npix=1000
+        self.cellsize=0.1*u.arcsec
+        self.imshape = (len(self.freqs),len(self.stokes),self.npix, self.npix)
+        self.wcs  = WCS(self.wcs_input_dict())
+        self.data = fits.open("/home/ebonnassieux/OJ287_averaged_outer_uvcut_0.8arcsec-MFS-image.fits")[0].data
+        self.hdu = fits.PrimaryHDU(data=self.data, header=self.wcs.to_header())
+        self.hdu.writeto('example.fits',overwrite=True)
+        print("The two images should be exactly the same")
+        print("dsm /home/ebonnassieux/OJ287_averaged_outer_uvcut_0.8arcsec-MFS-image.fits Data3GC/example.fits")
 
-    def create_image(self):
-        # Define the image parameters
-        shape = [self.npix, self.npix]  
-        cell = [self.cellsize, self.cellsize]
-        freq = self.freqs
-        stokes = self.stokes
-
-        # Create the image
-        im = image.Image(shape=shape, cell=cell, freq=freq, stokes=stokes)
-
-        # Save the image
-        im.tofile(self.skyname + '.im')
-
-        return im
-
-
-
-
-    def __str__(self):
-        test=1
-
-    def show(self):
-        # this should imshow the sky and its divisions.
-        print(self.name)
-
-    def residuals(self):
-        # residual data grid.
-        test=1
-    
-    def model(self):
-        # sky model data grid.
-        test=1
-
-    def restoringbeam(self,bmaj,bmin,PA):
-        # restoring beam gaussian
-        self.bmaj=bmaj
-        self.bmin=bmin
-        self.PA=PA
-        test=1
-
-    def coords(self):
-        # coordinate grid
-        test=1
-
-    def mask(self):
-        # clean mask
-        test=1
-
-    def region(self):
-        # returns region coverage of the sky. Used for overlap determinations.
-        test=1
-
-    def write(self,filename):
-        # write sky to file
-        test=1
-
-    def JonesRegions(self,njonesdir):
-        # generates tessels (Jones facets)
-        test=1
 
 #    # define facets as sub-skies
 #    class Facet(Sky):
