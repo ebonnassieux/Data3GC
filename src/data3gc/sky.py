@@ -16,17 +16,26 @@ import matplotlib.pyplot as plt
 # for region functionalities
 import regions
 
+### functionalities to add:
+###  - multisky (join Sky objects, show becomes healpix?)
+###  - genuine facet-as-subsky (currently it's all indices, kind of shitty)
+###  - generate Tessel layer for backwards compatibility
+###  - group facets by Voronoi tesselation of Model data slice
+###  - !!! read/write !!! super important
 
+### below is experimental for Stokes. over-engineering in practice, but was a personal test.
 type StokesEigen = Literal['I','Q','U','V']
-
 from typing import Literal
 type Stokes = StokesEigen | tuple[StokesEigen] | tuple[StokesEigen, StokesEigen] | tuple[StokesEigen, StokesEigen, StokesEigen] | tuple[StokesEigen, StokesEigen, StokesEigen, StokesEigen]
+
+
 
 class Sky:
     '''
     A class represenging the Sky that we want to work with.
-    Attributes:
-        centrecoords
+    Sky attributes:
+        :param centrecoords: input SkyCoord for this sky's center coordinates 
+        :type centrecoords: SkyCoord
         npix
         cellsize
         freqs
@@ -34,43 +43,14 @@ class Sky:
         stokes
         skyname
         facets
+    Facet attributes:
+        ...
     '''
     def __str__(self):
         # figure out what the print for the function returns.
         # Name, coords, resolution, shape?
         print(self.phasecenter.to_string('hmsdms'))
         return f"Sky({self.name}, ({self.phasecenter.to_string('hmsdms')}), {self.nfacets} facets"
-
-    def show(self,
-             data=None | np.ndarray ,
-             facets: list | str="all",
-             vmin: float=-8.e-5,
-             vmax: float=2.e-4
-             ):
-        # this should imshow the sky and its divisions.
-        if data==None:
-            data=self.restored.data
-        data = fits.open("/home/ebonnassieux/OJ287_averaged_outer_uvcut_0.8arcsec-MFS-image.fits")[0].data
-        # set up the plot axes etc
-        fig, ax = plt.subplots(subplot_kw=dict(projection=self.gridwcs))
-        ax.set(xlabel='Right Ascension', ylabel='Declination',title=self.name)
-        if facets=="all":
-            ax.imshow(data[0,0,:,:], vmin=vmin, vmax=vmax, origin='lower')
-            #ax.grid(color='white', ls='solid')
-            self.grid_reg.plot(ax=ax)
-            for facet_reg in self.facet_grid_regs:
-                facet_reg.plot(ax=ax)
-        else:
-            totalmask=np.zeros_like(data).astype(bool)
-            for ifacet in facets:
-                regmask = self.facet_sky_regs[ifacet].contains(wcs=self.gridwcs,skycoord=self.skycoords)
-                totalmask = totalmask + regmask
-                self.facet_grid_regs[ifacet].plot(ax=ax)
-            self.grid_reg.plot(ax=ax)
-            data = data*totalmask
-            ax.imshow(data[0,0,:,:], vmin=vmin, vmax=vmax, origin='lower')
-        self.grid_reg.plot(ax=ax)
-        plt.show()
 
     ### constructor
     def __init__(self,
@@ -99,18 +79,15 @@ class Sky:
         # initialise the data grids
         ### TODO: define these as shared xarrays?
         ### TODO: define specific shared-xarray image format?
-        self.restored = self.ImageHDU("restored",
-                                      np.zeros(self.imshape),
-                                      self.wcs)
-        self.residual = self.ImageHDU("residual",
-                                      np.zeros(self.imshape),
-                                      self.wcs)
-        self.model    = self.ImageHDU("model",
-                                      np.zeros(self.imshape),
-                                      self.wcs)
-        self.mask     = self.ImageHDU("mask",
-                                      np.zeros(self.imshape),
-                                      self.wcs)
+        # order: dirty, restored, residual, model, mask, beam
+        #### deprecated initialisation
+        self.initdata()
+
+        ### DEBUG
+
+        self.data["restored"].data = fits.open("/home/ebonnassieux/OJ287_averaged_outer_uvcut_0.8arcsec-MFS-image.fits")[0].data
+
+
         # Initialise the coordinate grids in ra, dec and l,m
         coordgrid = np.meshgrid(np.arange(self.npix),np.arange(self.npix))
         # drop the Stokes, Freq axes for this
@@ -120,11 +97,56 @@ class Sky:
         self.l,self.m  = self.radec2lm_scalar(self.skycoords,self.phasecenter)
         # initialise regions
         self.sky_reg,self.grid_reg = self.region()
-        # initialise facet properties
-        self.facet_phasecenters = self.generate_facet_phasecenters()
-        self.facet_npix         = self.generate_facet_npix()
+        if self.nfacets!=0:
+            # initialise facet properties
+            self.facet_phasecenters = self.generate_facet_phasecenters()
+            self.facet_npix         = self.generate_facet_npix()
+            self.facet_sky_regs,self.facet_grid_regs = self.generate_facet_regions()
+            self.facets={}
+            for facet_phasecenter in self.facet_phasecenters:
+                facetname = facet_phasecenter.to_string('hmsdms')
+                self.facets[facetname]=Sky(skyname=facetname,
+                    centrecoords=facet_phasecenter,
+                    npix=self.facet_npix,
+                    cellsize=self.cellsize,
+                    freqs=self.freqs,
+                    nfacets=0,
+                    stokes=self.stokes
+                )
+                # define facet grid properties
+                self.facets[facetname].imshape = (len(freqs),len(stokes),npix, npix)      
+                self.facets[facetname].wcs     = WCS(self.wcs_input_dict())
+                self.facets[facetname].gridwcs = self.wcs.dropaxis(2).dropaxis(2)
+                self.facets[facetname].initdata()
+                # initialise data values
+            
+            print("OK")
+            #print(list(self.facets)[4].sky_reg)
+            #print(self.facet_sky_regs[4])
 
-        self.facet_sky_regs,self.facet_grid_regs = self.generate_facet_regions()
+            #stop     
+
+
+    ### data initialiser functions
+    def returnHDU(self,
+               hduname:str):
+        thishdu = self.ImageHDU(hduname,
+                        np.zeros(self.imshape),
+                        self.wcs)
+        return thishdu
+    
+    def initdata(self):
+        '''
+        Creates and populations data dictionary.
+        '''
+        self.data={}
+        self.data["dirty"]    = self.returnHDU("dirty")
+        self.data["restored"] = self.returnHDU("restored")
+        self.data["residual"] = self.returnHDU("residual")
+        self.data["model"]    = self.returnHDU("model")
+        self.data["mask"]     = self.returnHDU("mask")
+        self.data["beam"]     = self.returnHDU("beam")
+
 
 
     def radec2lm_scalar(self,
@@ -153,6 +175,45 @@ class Sky:
         m = np.sin(decs) * np.cos(refdec) - np.cos(decs) * np.sin(refra) * np.cos(ras - refra)
         return l,m
     
+
+    def show(self,
+             datakey: str="restored",
+             facets: list | str="all",
+             vmin: float=-8.e-5,
+             vmax: float=2.e-4
+             ):
+        # this should imshow the sky and its divisions.
+        ### TODO: show facets by name / group / sky area rather than index!
+        # set up the plot axes etc
+        fig, ax = plt.subplots(subplot_kw=dict(projection=self.gridwcs))
+        ax.set(xlabel='Right Ascension', ylabel='Declination',title=self.name)
+        # get data as numpy array
+        data = self.data[datakey].data
+        if self.nfacets==0:
+            ax.imshow(data[0,0,:,:], vmin=vmin, vmax=vmax, origin='lower')           
+        else:
+            if facets=="all":
+                # only plot the facet grid
+                ax.imshow(data[0,0,:,:], vmin=vmin, vmax=vmax, origin='lower')
+                #ax.grid(color='white', ls='solid')
+                self.grid_reg.plot(ax=ax)
+                for facet_reg in self.facet_grid_regs:
+                    facet_reg.plot(ax=ax)
+            else:
+                totalmask=np.zeros_like(self.data[datakey]).astype(bool)
+                for ifacet in facets:
+                    regmask = self.facet_sky_regs[ifacet].contains(wcs=self.gridwcs,skycoord=self.skycoords)
+                    totalmask = totalmask + regmask
+                    self.facet_grid_regs[ifacet].plot(ax=ax)
+                self.grid_reg.plot(ax=ax)
+                data = data*totalmask
+                ax.imshow(data[0,0,:,:], vmin=vmin, vmax=vmax, origin='lower')
+                
+        self.grid_reg.plot(ax=ax)
+        plt.show()
+    
+    ### facet initialisation functionalities
+
     def generate_facet_phasecenters(self):
         bin_edges   = np.linspace(0,self.npix,self.nfacets+1).astype(int)
         bin_centers = ((bin_edges[:-1] + bin_edges[1:]) / 2).astype(int)
@@ -188,10 +249,12 @@ class Sky:
         Docstring for close
         Close all HDU objects, free up virtual memory, exit gracefully.
         '''
-        self.restored.close()
-        self.residual.close()
-        self.model.close()
-        self.mask.close()
+        for key in self.data.keys():
+            self.data[key]._close()
+#        self.restored.close()
+#        self.residual.close()
+#        self.model.close()
+#        self.mask.close()
 
     def ImageHDU(self,
                  name:str,
@@ -320,9 +383,26 @@ class Sky:
         print("dsm /home/ebonnassieux/OJ287_averaged_outer_uvcut_0.8arcsec-MFS-image.fits Data3GC/example.fits")
 
 
-#    # define facets as sub-skies
-#    class Facet(Sky):
-#        # subfacet of the sky. Sky needs to know about its facets.
-#        def __init__(self,CentreCoords,npix):
-#            super().__init__(CentreCoords,gridsize,nfacets=1)
+
+# define facets as sub-skies
+class Facet(Sky):
+    # subfacet of the sky. Sky needs to know about its facets.
+    def __init__(self,
+                centrecoords : SkyCoord,
+                npix         : int,
+                cellsize     : u.Quantity,
+                freqs        : list[u.Quantity],
+                nfacets      : int=1,
+                stokes       : Stokes="I",
+                skyname      : str="Facet",
+                ):
+        test=1
+        super().__init__(freqs,
+                         cellsize,
+                         stokes,
+                         nfacets)
+        self.centrecoords = centrecoords
+        self.npix = npix
+        self.skyname = skyname
+
 
