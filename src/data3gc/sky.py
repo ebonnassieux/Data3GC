@@ -382,27 +382,3 @@ class Sky:
         print("The two images should be exactly the same")
         print("dsm /home/ebonnassieux/OJ287_averaged_outer_uvcut_0.8arcsec-MFS-image.fits Data3GC/example.fits")
 
-
-
-# define facets as sub-skies
-class Facet(Sky):
-    # subfacet of the sky. Sky needs to know about its facets.
-    def __init__(self,
-                centrecoords : SkyCoord,
-                npix         : int,
-                cellsize     : u.Quantity,
-                freqs        : list[u.Quantity],
-                nfacets      : int=1,
-                stokes       : Stokes="I",
-                skyname      : str="Facet",
-                ):
-        test=1
-        super().__init__(freqs,
-                         cellsize,
-                         stokes,
-                         nfacets)
-        self.centrecoords = centrecoords
-        self.npix = npix
-        self.skyname = skyname
-
-

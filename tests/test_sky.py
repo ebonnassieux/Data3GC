@@ -6,7 +6,7 @@ from astropy.io import fits
 import matplotlib.pyplot as plt
 import pytest
 
-from data3gc.sky import Sky, Facet
+from data3gc.sky import Sky
 
 test_sky = Sky(skyname="OJ287",
                centrecoords=SkyCoord(133.703625*u.deg,20.1085*u.deg,frame="fk5"),
