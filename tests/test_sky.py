@@ -17,17 +17,14 @@ test_sky = Sky(skyname="OJ287",
                stokes="I"
 )
 
-#test_facet = Facet(Sky)
-#centrecoords=SkyCoord(133.703625*u.deg,20.1085*u.deg,frame="fk5"),
-#                   npix = 50)
+import random
 
+show_facets = random.sample(range(0,test_sky.nfacets**2),15)
 
-show_facets = np.random.randint(0,test_sky.nfacets**2,size=15)
+#show_facets = [4]
 
-test_sky.show()
+#test_sky.show()
 
-test_sky.show(facets=list(show_facets))
+test_sky.show(plot_facets=list(show_facets))
 
-
-#print(test_sky)
-test_sky.close()
+#test_sky.close()
