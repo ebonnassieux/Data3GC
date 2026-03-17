@@ -1,0 +1,69 @@
+Memo detailing how to autogenerate documentation with Sphinx
+
+First step: in your project (e.g. Data3GC), create a docs folder.
+
+$ mkdir docs
+
+Go through the sphinx setup process. Ideally use separate build and root dirs.
+
+$ sphinx-quickstart docs
+$ y
+$ Data3GC
+$ Firstname Lastname
+$ 0.1.0
+$ en
+
+Here, we want to use project docstrings to populate the documentation. 
+Therefore, we want to use sphinx-apidoc. In this example, we are building
+for a library; the source code is located in Data3GC/src. We thus do:
+
+sphinx-apidoc -o source ../src/
+
+which adds two .rst files to our source folder. 
+The first one is Data3GC.rst, a file describing the structure of the codebase. 
+The second one is modules.rst, an index equivalent which loads data3gc, currently our only module.
+
+We can now edit the index file to load modules, which will tell sphinx to document this module.
+I assume it is possible to load multiple modules if we wanted to; haven't tried yet.
+By default, sphinx-quickstart will add modules.rst to the index, so no further work needed.
+
+Finally, we now need to edit the project configuration so that sphinx can load the module and read
+the docstrings. 
+
+Firstly, under general configuration, we need to add the path to the local project.
+Paste the following lines verbatim (since in this case, our module lives in Data3GC/src)
+
+# do below to add current project to syspath as absolute path
+import sys
+from pathlib import Path
+sys.path.insert(0,str(Path('../..', 'src').resolve()))
+
+Secondly, we need to specify the sphinx extensions we want to use for our autodoc.
+Add the following lines verbatim under general configuration:
+
+extensions = ["sphinx.ext.intersphinx",
+              "sphinx.ext.autodoc",
+              "sphinx.ext.autosummary",
+              "sphinx.ext.napoleon",
+              "sphinx.ext.viewcode",
+              "sphinx.ext.inheritance_diagram"]
+
+Thirdly, we need to add the project dependencies so that sphinx can load the module.
+Add the following lines verbatim under general configuration:
+
+autodoc_mock_imports = ['pytest',
+                        'numpy',
+                        'astropy',
+                        'matplotlib',
+                        'regions']
+
+Finally, we can add some optional stuff. If you want. Seems to work fine without.
+
+autodoc_typehints = "description"
+autosummary_generate = True
+intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
+
+We can now run the sphinx builder. Go to Data3GC/docs, and run
+
+$ make clean
+$ make html

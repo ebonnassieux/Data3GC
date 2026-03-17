@@ -32,26 +32,31 @@ class Sky:
     '''
     A class represenging the Sky that we want to work with.
     Sky attributes:
-        :param centrecoords: input SkyCoord for this sky's center coordinates 
-        :type centrecoords: SkyCoord
-        :param npix: size of the sky grid, defined as a square 
-        :type npix: int
-        :param cellsize: angular size of individual pixels, in angles (e.g. arcsec)
-        :type cellsize: u.Quantity
-        :param freqs: List of frequencies for each spectral cube slice
-        :type freqs: list[u.Quantity]
-        :param nfacets: Create sub-skies (facets) defined automatically as a square grid. nfacets defines how many facets to create along 1 axis; a total of nfacets^2 facets are created for the sky. 
-        :type nfacets: int
-        :param stokes: Stokes parameters of the sky, which can be one or more values of I,Q,U,V.
-        :type stokes: Stokes="I"
-        :param skyname: Name given to this patch of sky. 
-        :type skyname: str="Sky"
+    :param centrecoords: input SkyCoord for this sky's center coordinates 
+    :type centrecoords: SkyCoord
+    :param npix: size of the sky grid, defined as a square 
+    :type npix: int
+    :param cellsize: angular size of individual pixels, in angles (e.g. arcsec)
+    :type cellsize: u.Quantity
+    :param freqs: List of frequencies for each spectral cube slice
+    :type freqs: list[u.Quantity]
+    :param nfacets: Create sub-skies (facets) defined automatically as a square grid. nfacets defines how many facets to create along 1 axis; a total of nfacets^2 facets are created for the sky. 
+    :type nfacets: int
+    :param stokes: Stokes parameters of the sky, which can be one or more values of I,Q,U,V.
+    :type stokes: Stokes="I"
+    :param skyname: Name given to this patch of sky. 
+    :type skyname: str="Sky"
     If nfacets!=0, facets are an important attribute generated.
-        facets
+    facets
     Facet attributes:
-        ...
+    ...
     '''
     def __str__(self):
+        '''
+        Docstring for __str__
+        
+        :param self: Description
+        '''
         # figure out what the print for the function returns.
         # Name, coords, resolution, shape?
         print(self.phasecenter.to_string('hmsdms'))
@@ -67,6 +72,25 @@ class Sky:
                  stokes       : Stokes="I",
                  skyname      : str="Sky",
                  ):
+        '''
+        Docstring for __init__
+        
+        :param self: Description
+        :param centrecoords: Description
+        :type centrecoords: SkyCoord
+        :param npix: Description
+        :type npix: int
+        :param cellsize: Description
+        :type cellsize: u.Quantity
+        :param freqs: Description
+        :type freqs: list[u.Quantity]
+        :param nfacets: Description
+        :type nfacets: int
+        :param stokes: Description
+        :type stokes: Stokes
+        :param skyname: Description
+        :type skyname: str
+        '''
         # initialise global sky variables
         self.name        = skyname
         self.phasecenter = centrecoords
@@ -85,7 +109,7 @@ class Sky:
         self.initdata()
 
 #        ### DEBUG
-#        self.data["restored"] = fits.open("/home/ebonnassieux/OJ287_averaged_outer_uvcut_0.8arcsec-MFS-image.fits")[0].data
+        self.data["restored"] = fits.open("/home/ebonnassieux/OJ287_averaged_outer_uvcut_0.8arcsec-MFS-image.fits")[0].data
 
         # Initialise the coordinate grids in ra, dec and l,m
         coordgrid = np.meshgrid(np.arange(self.npix),np.arange(self.npix))
@@ -146,6 +170,13 @@ class Sky:
     ### data initialiser functions
     def returnHDU(self,
                hduname:str):
+        '''
+        Returns HDU object corresponding to Sky object.
+        
+        :param self: Description
+        :param hduname: Description
+        :type hduname: str
+        '''
         thishdu = self.ImageHDU(hduname,
                         np.zeros(self.imshape),
                         self.wcs)
@@ -153,7 +184,10 @@ class Sky:
     
     def initdata(self):
         '''
-        Creates and populations data dictionary.
+        Creates and populates data dictionary.
+        
+        :param self: Sky object
+ 
         '''
         ### TODO: define these as shared xarrays?
         ### TODO: define specific shared-xarray image format?
@@ -178,7 +212,7 @@ class Sky:
         
         Function based on DDFacet to generate l,m coordinates from RA, Dec SkyCoord
 
-        :param self: based on Sky c´lass
+        :param self: based on Sky class
         :param coords: input SkyCoord array object for the full grid 
         :type coords: SkyCoord
         :param phasecenter: Phase center from which to compute l,m values
@@ -203,6 +237,21 @@ class Sky:
              vmin: float=-8.e-5,
              vmax: float=2.e-4
              ):
+        '''
+        Function to show the current sky, requesting specific facet subsets
+        
+        :param self: Description
+        :param datakey: Description
+        :type datakey: str
+        :param plot_facets: Description
+        :type plot_facets: list | str
+        :param channel: Description
+        :param stokes: Description
+        :param vmin: Description
+        :type vmin: float
+        :param vmax: Description
+        :type vmax: float
+        '''
         # this should imshow the sky and its divisions.
         # set up the plot axes etc
         fig, ax = plt.subplots(subplot_kw=dict(projection=self.gridwcs))
@@ -242,6 +291,11 @@ class Sky:
     
     ### facet initialisation functionalities
     def set_facet_pixgrid(self):
+        '''
+        Docstring for set_facet_pixgrid
+        
+        :param self: Description
+        '''
         # define regions by their edges
         self.bin_edges   = np.linspace(0,self.npix,self.nfacets+1).astype(int)
         # build sizes
@@ -258,6 +312,11 @@ class Sky:
 
 
     def generate_facet_regions(self):
+        '''
+        Function to generate region object for a given facet
+        
+        :param self: Description
+        '''
         reg_visuals = {'color':"red",
                        'linewidth':1}
         facet_grid_regs = []
@@ -313,6 +372,17 @@ class Sky:
                       bmaj:u.Quantity,
                       bmin:u.Quantity,
                       PA:float=0):
+        '''
+        Generates restoring beam value for given grid
+        
+        :param self: Description
+        :param bmaj: Description
+        :type bmaj: u.Quantity
+        :param bmin: Description
+        :type bmin: u.Quantity
+        :param PA: Description
+        :type PA: float
+        '''
         # restoring beam gaussian
         # call as a function to initialise on-the-fly
         self.bmaj=bmaj.rad
@@ -322,9 +392,14 @@ class Sky:
 
     def region(self, 
                reg_visuals:dict):
-        # returns region coverage of the sky. Used for overlap determinations.
-        ### !!! CAREFUL !!! when initialising facets, the ORIGINAL SKY PHASECENTER gets used.......
-        ### TODO: fix this eventually.
+        '''
+        Returns region coverage of the sky. Used for overlap determinations.
+        !!! CAREFUL !!! when initialising facets, the ORIGINAL SKY PHASECENTER gets used.......
+
+        :param self: Description
+        :param reg_visuals: Description
+        :type reg_visuals: dict
+        '''
         sky_reg  = regions.RectangleSkyRegion(center=self.phasecenter, 
                                               width=self.cellsize*(self.npix), 
                                               height=self.cellsize*(self.npix),
@@ -335,6 +410,13 @@ class Sky:
 
 
     def JonesRegions(self,njonesdir):
+        '''
+        Function to associate regions for given Jones-direction.
+        TO BE DONE
+        
+        :param self: Description
+        :param njonesdir: Description
+        '''
         # generates tessels (Jones facets)
         test=1
 
@@ -408,7 +490,12 @@ class Sky:
 
 
 def generate_vertices(edges):
-    '''docstring'''
+    '''
+    Generates vertices for given list of region edges.
+    
+    :param edges: Description
+    
+    '''
     vertices=[]
     for ifacet in range(len(edges)-1):
         for jfacet in range(len(edges)-1):
@@ -426,7 +513,12 @@ def generate_vertices(edges):
     return vertices
 
 def MaskFromVertices(data,vertices):
-    '''docstring'''
+    '''
+    Make a mask from given array + vertices.
+    
+    :param data: Description
+    :param vertices: Description
+    '''
     if len(data)==2:
         d = np.zeros_like(data).astype(bool)
     else:

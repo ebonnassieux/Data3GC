@@ -23,7 +23,7 @@ show_facets = random.sample(range(0,test_sky.nfacets**2),15)
 
 #show_facets = [4]
 
-#test_sky.show()
+test_sky.show()
 
 test_sky.show(plot_facets=list(show_facets))
 
