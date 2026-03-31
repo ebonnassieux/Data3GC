@@ -225,7 +225,7 @@ class Sky:
         ras    = coords.ra.rad
         decs   = coords.dec.rad
         l = np.cos(decs) * np.sin(ras - refra)
-        m = np.sin(decs) * np.cos(refdec) - np.cos(decs) * np.sin(refra) * np.cos(ras - refra)
+        m = np.sin(decs) * np.cos(refdec) - np.cos(decs) * np.sin(refdec) * np.cos(ras - refra)
         return l,m
     
 
