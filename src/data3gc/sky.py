@@ -153,7 +153,7 @@ class Sky:
                 self.facets[facetname].sky_reg =  self.facet_sky_regs[facet_index]
                 self.facets[facetname].grid_reg =  self.facet_grid_regs[facet_index]
                 # define facet grid properties
-                self.facets[facetname].imshape = (len(freqs),len(stokes),xlen, ylen)
+                self.facets[facetname].imshape = (len(freqs),len(stokes),ylen, xlen)
                 self.facets[facetname].wcs     = WCS(self.facets[facetname].wcs_input_dict())
                 self.facets[facetname].gridwcs = self.facets[facetname].wcs.dropaxis(2).dropaxis(2)
                 self.facets[facetname].initdata()
@@ -163,6 +163,12 @@ class Sky:
                 ymin,ymax = int(np.min(verts.y)),int(np.max(verts.y))
                 sky_to_facet_regmask = np.zeros(self.imshape).astype(bool)
                 sky_to_facet_regmask[:,:,ymin:ymax,xmin:xmax]=True
+                self.facets[facetname].sky_to_facet_regmask = sky_to_facet_regmask
+                # add vertices info
+                self.facets[facetname].xmin = xmin
+                self.facets[facetname].xmax = xmax
+                self.facets[facetname].ymin = ymin
+                self.facets[facetname].ymax = ymax
                 # fill data
                 for key in self.data.keys():
                     self.facets[facetname].data[key] = self.data[key][sky_to_facet_regmask].reshape(self.facets[facetname].imshape)
@@ -289,6 +295,22 @@ class Sky:
                 ax.imshow(data[channel,stokes,:,:], vmin=vmin, vmax=vmax, origin='lower',alpha=0.6)
         plt.show()
     
+    ### update sky with facet information
+    def update(self,
+               datakey: str="restored",
+               update_facets: list | str="all",
+               channel=0,
+               stokes=0,
+              ):
+        if update_facets=="all":
+            for facet_key in self.facets.keys():
+                self.data[datakey][channel,
+                                   stokes,
+                                   self.facets[facet_key].ymin:self.facets[facet_key].ymax,
+                                   self.facets[facet_key].xmin:self.facets[facet_key].xmax] = self.facets[facet_key].data[datakey][channel,stokes,:,:]
+
+
+
     ### facet initialisation functionalities
     def set_facet_pixgrid(self):
         '''

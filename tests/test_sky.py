@@ -8,23 +8,40 @@ import pytest
 
 from data3gc.sky import Sky
 
+# initialise the sky object
 test_sky = Sky(skyname="OJ287",
                centrecoords=SkyCoord(133.703625*u.deg,20.1085*u.deg,frame="fk5"),
                npix=1000,
                cellsize=0.1*u.arcsec,
                freqs=[144e6*u.MHz],
-               nfacets=5,
+               nfacets=3,
                stokes="I"
 )
 
+# visualise full sky object
+#test_sky.show()
+
+# plot random facets
 import random
+#show_facets = random.sample(range(0,test_sky.nfacets**2),15)
+#test_sky.show(plot_facets=list(show_facets))
 
-show_facets = random.sample(range(0,test_sky.nfacets**2),15)
-
-#show_facets = [4]
-
+# edit a facet and overplot it
+edit_facets = [0,1,]
+keylist = list(test_sky.facets.keys())#[edit_facets]
+for i, key in enumerate(keylist):
+    if i in edit_facets:
+        this_facet_data = test_sky.facets[key].data["restored"]
+        # add noise to this facet to show we can edit specific areas
+        noisevals = float(i+1)*np.random.normal(loc=0,
+                                            scale=0.01,
+                                            size=this_facet_data.shape)
+        test_sky.facets[key].data["restored"] = this_facet_data + noisevals
+#test_sky.show(plot_facets=list(edit_facets))
+# update sky with facet information
+test_sky.update()
 test_sky.show()
 
-test_sky.show(plot_facets=list(show_facets))
 
-#test_sky.close()
+# exit gracefully
+test_sky.close()
