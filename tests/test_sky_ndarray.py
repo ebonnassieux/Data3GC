@@ -5,18 +5,28 @@ from astropy.coordinates import SkyCoord
 from astropy.io import fits
 import matplotlib.pyplot as plt
 import pytest
+import pathlib
 
-from data3gc.sky import Sky
 
-# initialise the sky object
-test_sky = Sky(skyname="OJ287",
-               centrecoords=SkyCoord(133.703625*u.deg,20.1085*u.deg,frame="fk5"),
-               npix=1000,
-               cellsize=0.1*u.arcsec,
-               freqs=[144e6*u.MHz],
-               nfacets=3,
-               stokes="I"
-)
+from data3gc.sky_ndarray import Sky
+
+# initialise the sky object from test fits file
+p = pathlib.Path("/home/bonnassieux/Downloads/M31-lowres-LOFAR.fits")
+filename=p.absolute().as_posix()
+test_sky = Sky.from_fits(filename,
+                         nfacets=0)
+
+
+
+# # initialise the sky object from variables directly
+# test_sky = Sky(skyname="OJ287",
+#                centrecoords=SkyCoord(133.703625*u.deg,20.1085*u.deg,frame="fk5"),
+#                npix=1000,
+#                cellsize=0.1*u.arcsec,
+#                freqs=[144e6*u.MHz],
+#                nfacets=3,
+#                stokes="I"
+# )
 
 # visualise full sky object
 #test_sky.show()

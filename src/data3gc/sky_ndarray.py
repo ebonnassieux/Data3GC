@@ -15,6 +15,8 @@ from astropy.io import fits
 import matplotlib.pyplot as plt
 # for region functionalities
 import regions
+# for pathing functionalities
+import pathlib
 
 ### functionalities to add:
 ###  - !!! read/write !!! super important
@@ -109,7 +111,7 @@ class Sky:
         self.initdata()
 
 #        ### DEBUG
-        self.data["restored"] = fits.open("/home/ebonnassieux/OJ287_averaged_outer_uvcut_0.8arcsec-MFS-image.fits")[0].data
+#        self.data["restored"] = fits.open("/home/ebonnassieux/OJ287_averaged_outer_uvcut_0.8arcsec-MFS-image.fits")[0].data
 
         # Initialise the coordinate grids in ra, dec and l,m
         coordgrid = np.meshgrid(np.arange(self.npix),np.arange(self.npix))
@@ -506,9 +508,72 @@ class Sky:
         '''docstring'''
         print("TODO")
 
-    def read(filename):
-        '''docstring'''
-        print("TODO")
+    @classmethod
+    def from_fits(cls,
+                  filename:str,
+                  hdu_n:int=0,
+                  nfacets:int=5,
+                  skyname:str=None,
+                  stokes:str="I"):
+        '''
+        Class method to initialise Sky object from a .fits file.
+        Only works on a single hdu at a time at present, defined by hdu_n.
+        If no skyname is provided, it will be set to the filename absolute path.
+        '''
+        filepath = pathlib.Path(filename)
+        if filepath.exists()==False:
+            raise FileNotFoundError
+        if skyname is None:
+            skyname = filename
+        hdul = fits.open(filename)
+        hdu = hdul[hdu_n]
+        # read data
+        fits_data = hdu.data
+        fits_wcs = WCS(header=hdu.header)
+        # check for frequency
+        for key in hdu.header.keys():
+            if "unit" in str(key).lower():
+                if "hz" in hdu.header[key].lower():
+                    freqaxis = str(key.split("CUNIT")[1])
+                    fits_freqs = hdu.header["CRVAL"+freqaxis]+np.arange(hdu.header["NAXIS"+freqaxis]*hdu.header["CDELT"+freqaxis])
+                    fits_freqs *= u.Unit(hdu.header["CUNIT"+freqaxis])
+        # check for radio-style shape
+        if len(fits_data.shape)==4:
+            fits_npix = max(fits_data.shape[2],fits_data.shape[3])
+            fits_style="radio"
+            # read centrecoords from fits
+            centrepixcoord = round(fits_npix/2)
+            centreskycoords = fits_wcs.pixel_to_world(centrepixcoord,centrepixcoord,0,0)
+        else:
+            fits_npix = max(fits_data.shape[0],fits_data.shape[1])
+            fits_style="optical"
+            # read centrecoords from fits
+            centrepixcoord = round(fits_npix/2)
+            centreskycoords = fits_wcs.pixel_to_world(centrepixcoord,centrepixcoord)
+        fits_centrecoords = centreskycoords[0]
+        # read cellsize
+        fits_cellsize = np.abs(hdu.header["CDELT1"]) * u.Unit(hdu.header["CUNIT1"])
+        # clean up before instantiating sky
+        del(fits_data)
+        hdul.close()
+
+        this_sky = Sky(skyname=skyname,
+                       centrecoords=fits_centrecoords,
+                       npix=fits_npix,
+                       cellsize=fits_cellsize,
+                       freqs=fits_freqs,
+                       nfacets=nfacets,
+                       stokes=stokes
+        )
+        # initialise data arrays from fits
+        for key in this_sky.data.keys():
+            print(key)
+        stop
+
+
+        ...
+
+        return this_sky
 
 
 def generate_vertices(edges):
