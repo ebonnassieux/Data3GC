@@ -514,7 +514,8 @@ class Sky:
                   hdu_n:int=0,
                   nfacets:int=5,
                   skyname:str=None,
-                  stokes:str="I"):
+                  stokes:str="I",
+                  default_data_type:str="restored"):
         '''
         Class method to initialise Sky object from a .fits file.
         Only works on a single hdu at a time at present, defined by hdu_n.
@@ -565,14 +566,24 @@ class Sky:
                        nfacets=nfacets,
                        stokes=stokes
         )
-        # initialise data arrays from fits
-        for key in this_sky.data.keys():
-            print(key)
-        stop
-
-
-        ...
-
+        # initialise data arrays from fits. Datakeys includes "image" for wsclean compatibility.
+        datakeys = {"dirty",
+                "restored",
+                "residual",
+                "model",
+                "mask",
+                "beam",
+                "image"}
+        baseimagename=None
+        for key in datakeys:
+            if str(key) in filename:
+                 baseimagename=filename.split(key)[0]
+                 print("Image identified as containing %s; deriving base image name and populating sky with all available fits files."%key)
+        if baseimagename==None:
+            print("Image string does not include data keyword; assume it is a %s image. All other data arrays will be empty."%default_data_type)
+            hdul = fits.open(filename)
+            this_sky.data["restored"]=hdul[hdu_n].data
+            hdul.close()
         return this_sky
 
 

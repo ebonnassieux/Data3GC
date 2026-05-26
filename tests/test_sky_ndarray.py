@@ -14,7 +14,7 @@ from data3gc.sky_ndarray import Sky
 p = pathlib.Path("/home/bonnassieux/Downloads/M31-lowres-LOFAR.fits")
 filename=p.absolute().as_posix()
 test_sky = Sky.from_fits(filename,
-                         nfacets=0)
+                         nfacets=2)
 
 
 
