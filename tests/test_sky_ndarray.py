@@ -16,7 +16,8 @@ from data3gc.sky_ndarray import Sky
 p = pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped.fits")
 filename=p.absolute().as_posix()
 test_sky_m31_cropped = Sky.from_fits(filename,
-                                     nfacets=5)
+                                     nfacets=3,
+                                     skyname="M31_cropped")
 # show full image
 test_sky_m31_cropped.show(vmin=-0.0005,vmax=0.0015)
 edit_facets = [0,7,]
@@ -35,8 +36,13 @@ test_sky_m31_cropped.show(plot_facets=list(edit_facets),vmin=-0.0005,vmax=0.0015
 # update sky with facet information
 test_sky_m31_cropped.update_sky()
 test_sky_m31_cropped.show(vmin=-0.0005,vmax=0.0015)
+# test serialisation
+test_sky_m31_cropped.write(basename="tests/serialisation_tests/test",
+                           write_facets="all",
+                           datakey="all",
+                           verbose=True)
 
-
+print("debug2")
 # exit gracefully
 test_sky_m31_cropped.close()
 

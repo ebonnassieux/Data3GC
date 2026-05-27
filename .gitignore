@@ -8,3 +8,6 @@ wheels/
 
 # Virtual environments
 .venv
+
+# serialisation test outputs
+tests/serialisation_tests/

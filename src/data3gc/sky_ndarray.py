@@ -156,7 +156,7 @@ class Sky:
                 self.facets[facetname].grid_reg =  self.facet_grid_regs[facet_index]
                 # define facet grid properties
                 self.facets[facetname].imshape = (len(freqs),len(stokes),ylen, xlen)
-                self.facets[facetname].wcs     = WCS(self.facets[facetname].wcs_input_dict())
+                self.facets[facetname].wcs     = WCS(self.facets[facetname].wcs_input_dict(facet=True))
                 self.facets[facetname].gridwcs = self.facets[facetname].wcs.dropaxis(2).dropaxis(2)
                 self.facets[facetname].initdata()
                 # generate mask from vertices.
@@ -201,12 +201,12 @@ class Sky:
         ### TODO: define specific shared-xarray image format?
         ### TODO: figure out if we want these to be HDUS? Probably not actually...
         self.data={}
-        self.datakeys = {"dirty",
+        self.datakeys = ["dirty",
                 "restored",
                 "residual",
                 "model",
                 "mask",
-                "beam"}
+                "beam"]
         for key in self.datakeys:
             self.data[key] = np.zeros(self.imshape)
 
@@ -331,6 +331,9 @@ class Sky:
         Can be done per data key and per facet.
         Does all datakeys and all facets by defaults
         '''
+        # correct for case where no facets are present
+        if self.nfacets==0:
+            update_facets=[]
         if update_facets=="all":
             update_facets = self.facets.keys()
         if datakey=="all":
@@ -404,11 +407,11 @@ class Sky:
 #        self.model.close()
 #        self.mask.close()
 
-    def ImageHDU(self,
-                 name:str,
-                 data:np.ndarray,
-                 wcs:WCS
-                 ):
+    def WriteFits(self,
+                  filename:str,
+                  key:str,
+                  overwrite=False
+                  ):
         '''
         Generates HDU object from data and WCS for writing purposes
         
@@ -420,10 +423,11 @@ class Sky:
         :param wcs: WCS of the HDU
         :type wcs: WCS
         '''
-        this_hdu      = fits.PrimaryHDU(data=data, 
-                                        header=wcs.to_header())
-        this_hdu.name = name
-        return this_hdu
+        this_hdu      = fits.PrimaryHDU(data=self.data[key], 
+                                        header=self.wcs.to_header())
+        writepath = pathlib.Path(filename)
+        this_hdu.writeto(writepath,overwrite=overwrite)
+        del(this_hdu)
 
     def restoringbeam(self,
                       bmaj:u.Quantity,
@@ -477,7 +481,7 @@ class Sky:
         # generates tessels (Jones facets)
         test=1
 
-    def wcs_input_dict(self):
+    def wcs_input_dict(self,facet=False):
         '''
         Docstring for wcs_input_dict
         This is the dictionary which defines the default WCS for our Sky object.
@@ -485,10 +489,19 @@ class Sky:
         :param self: Sky class
         '''
         # reference pixel is defined as centre of image, first freq, first stokes
-        ref_pixels = [int(0.5*self.npix),
-                      int(0.5*self.npix),
-                      1.,
-                      1.]
+        ### add 1 due to FITS convention count starting at 1 rather than 0
+        ### i.e. Fortran-style rather than C-style. This is also why the other
+        ### values are set to 1 rather than 0.
+        if facet==True:
+             ref_pixels = [round(0.5*self.npix)+1,
+                           round(0.5*self.npix)+1,
+                           1.,
+                           1.]
+        else:
+            ref_pixels = [round(0.5*self.npix)+1,
+                        round(0.5*self.npix)+1,
+                        1.,
+                        1.]
                 
         ref_crvals = [self.phasecenter.ra.to(u.deg).value,
                       self.phasecenter.dec.to(u.deg).value,
@@ -537,9 +550,83 @@ class Sky:
         }
         return wcs_input_dict
 
-    def write(self,filename):
-        '''docstring'''
-        print("TODO")
+    def write(self,
+              basename:str=None,
+              write_facets:list|str=None,
+              datakey:list|str="all",
+              object_serialisation:str="json",
+              verbose:bool=True,
+              overwrite:bool=True
+              ):
+        '''
+        Function to write sky object as .fits files, with metadata
+        preserved in JSON format. Individual facets are not written
+        to fits by default; can write either all or some by requesting
+        their facetnames. If you wish to write metadata ONLY (e.g. instantiate
+        sky object from output of imaging run), set datakey to None.
+        '''
+        # initialise write parameters for this call
+        if basename==None:
+            basename=self.name
+        if datakey=="all":
+            datakeys=self.datakeys
+        elif datakey==None:
+            datakeys=[]
+        else:
+            datakeys=datakey
+        if self.nfacets==0:
+            write_facets=None
+        # check if basename includes path; create it if absent
+        if "/" in basename:
+            # if basename *is* a path, append skyname
+            if basename[-1]=="/":
+                writepath=pathlib.Path(basename)
+                basename+=self.name
+            else:
+                # otherwise, get the writepath out of basename
+                writepath=pathlib.Path(basename[0:-len(basename.split("/")[-1])])
+            if pathlib.Path.is_dir(writepath)==False:
+                pathlib.Path.mkdir(writepath)
+        if verbose:
+            print("Serialising %s in %s"%(self.name,writepath))
+        # serialise metadata in json
+        ...
+        ### write requested data to fits
+        # check for facet output
+        print("debug1")
+        if write_facets is not None:
+            # build directory for facet fits files
+            facets_dir = pathlib.Path(basename+"_facets")
+            if pathlib.Path.is_dir(facets_dir)==False:
+                pathlib.Path.mkdir(facets_dir)
+            facets_dir=facets_dir.as_posix()
+            if verbose:
+                print("Writing facets fits files to: %s"%facets_dir)
+        for datakey in datakeys:
+            outfilename=basename+"."+datakey+".fits"
+            self.WriteFits(filename=outfilename,
+                           key=datakey,
+                           overwrite=overwrite)
+            if verbose:
+                print("Writing -- %8s -- sky data to  : %s"%(datakey,outfilename))
+            if write_facets is not None:
+                # if all facets requested, write all facets
+                if write_facets=="all":
+                    write_facets=self.facets.keys()
+                # write requested facets
+                for facet in write_facets:
+                    if facet in self.facets:
+                        outfilename=facets_dir+"/"+facet.replace(" ","_")+"."+datakey+".fits"
+                        self.facets[facet].WriteFits(filename=outfilename,
+                                                     key=datakey,
+                                                     overwrite=overwrite)
+                        if verbose:
+                            print("Writing -- %8s -- facet data to: %s"%(datakey,outfilename))
+                    elif verbose==True:
+                        print("Count not find requested facet %s for sky %s"%(facet,self.name))
+        # print output to notify user
+        if verbose:
+            print("Serialisation of %s complete."%self.name)
 
     @classmethod
     def from_fits(cls,
