@@ -306,7 +306,10 @@ class Sky:
                     ):
         if update_facets=="all":
             update_facets = self.facets.keys()
+        if datakey=="all":
+            datakeys=self.datakeys
         for facet_key in update_facets:
+            for datakey in datakeys:
                 self.data[datakey][channel,
                                    stokes,
                                    self.facets[facet_key].ymin:self.facets[facet_key].ymax,
