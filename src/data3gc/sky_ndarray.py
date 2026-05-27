@@ -201,13 +201,13 @@ class Sky:
         ### TODO: define specific shared-xarray image format?
         ### TODO: figure out if we want these to be HDUS? Probably not actually...
         self.data={}
-        keys = {"dirty",
+        self.datakeys = {"dirty",
                 "restored",
                 "residual",
                 "model",
                 "mask",
                 "beam"}
-        for key in keys:
+        for key in self.datakeys:
             self.data[key] = np.zeros(self.imshape)
 
     def radec2lm_scalar(self,
@@ -294,24 +294,44 @@ class Sky:
                                     origin="lower")
                     this_facet.grid_reg.plot(ax=ax)
                 # underlay the full sky
-                ax.imshow(data[channel,stokes,:,:], vmin=vmin, vmax=vmax, origin='lower',alpha=0.6)
+                ax.imshow(data[channel,stokes,:,:], vmin=vmin, vmax=vmax, origin='lower',alpha=0.1)
         plt.show()
     
     ### update sky with facet information
-    def update(self,
-               datakey: str="restored",
-               update_facets: list | str="all",
-               channel=0,
-               stokes=0,
-              ):
+    def update_sky(self,
+                    datakey: list | str="all",
+                    update_facets: list | str="all",
+                    channel=0,
+                    stokes=0,
+                    ):
         if update_facets=="all":
-            for facet_key in self.facets.keys():
+            update_facets = self.facets.keys()
+        for facet_key in update_facets:
                 self.data[datakey][channel,
                                    stokes,
                                    self.facets[facet_key].ymin:self.facets[facet_key].ymax,
                                    self.facets[facet_key].xmin:self.facets[facet_key].xmax] = self.facets[facet_key].data[datakey][channel,stokes,:,:]
 
+    def update_facets(self,
+                    datakey: list | str="all",
+                    update_facets: list | str="all",
+                    channel=0,
+                    stokes=0,
+                    ):
+        if update_facets=="all":
+            update_facets = self.facets.keys()
+        if datakey=="all":
+            datakeys=self.datakeys
+        for facet_key in update_facets:
+            for datakey in datakeys:
+                self.facets[facet_key].data[datakey][channel,stokes,:,:] = self.data[datakey][channel,
+                                                                                            stokes,
+                                                                                            self.facets[facet_key].ymin:self.facets[facet_key].ymax,
+                                                                                            self.facets[facet_key].xmin:self.facets[facet_key].xmax]
 
+
+ #for key in self.data.keys():
+ #                   self.facets[facetname].data[key] = self.data[key][sky_to_facet_regmask].reshape(self.facets[facetname].imshape)
 
     ### facet initialisation functionalities
     def set_facet_pixgrid(self):
@@ -566,8 +586,7 @@ class Sky:
                        nfacets=nfacets,
                        stokes=stokes
         )
-        # initialise data arrays from fits. Datakeys includes "image" for wsclean compatibility.
-        datakeys = {"dirty",
+        fits_datakeys = {"dirty",
                 "restored",
                 "residual",
                 "model",
@@ -575,7 +594,7 @@ class Sky:
                 "beam",
                 "image"}
         baseimagename=None
-        for key in datakeys:
+        for key in fits_datakeys:
             if str(key) in filename:
                  baseimagename=filename.split(key)[0]
                  print("Image identified as containing %s; deriving base image name and populating sky with all available fits files."%key)
@@ -584,6 +603,7 @@ class Sky:
             hdul = fits.open(filename)
             this_sky.data["restored"]=hdul[hdu_n].data
             hdul.close()
+        this_sky.update_facets()
         return this_sky
 
 

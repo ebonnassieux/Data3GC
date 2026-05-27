@@ -17,8 +17,11 @@ p = pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped.fits")
 filename=p.absolute().as_posix()
 test_sky_m31_cropped = Sky.from_fits(filename,
                                      nfacets=5)
+# show full image
 test_sky_m31_cropped.show(vmin=-0.0005,vmax=0.0015)
 edit_facets = [0,7,]
+# show before noise is added
+test_sky_m31_cropped.show(plot_facets=list(edit_facets),vmin=-0.0005,vmax=0.0015)
 keylist = list(test_sky_m31_cropped.facets.keys())#[edit_facets]
 for i, key in enumerate(keylist):
     if i in edit_facets:
@@ -30,7 +33,7 @@ for i, key in enumerate(keylist):
         test_sky_m31_cropped.facets[key].data["restored"] = this_facet_data + noisevals
 test_sky_m31_cropped.show(plot_facets=list(edit_facets),vmin=-0.0005,vmax=0.0015)
 # update sky with facet information
-test_sky_m31_cropped.update()
+test_sky_m31_cropped.update_sky()
 test_sky_m31_cropped.show(vmin=-0.0005,vmax=0.0015)
 
 
