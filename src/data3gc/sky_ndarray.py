@@ -174,23 +174,8 @@ class Sky:
                 # fill data
                 for key in self.data.keys():
                     self.facets[facetname].data[key] = self.data[key][sky_to_facet_regmask].reshape(self.facets[facetname].imshape)
-
-    ### data initialiser functions
-    def returnHDU(self,
-               hduname:str):
-        '''
-        Returns HDU object corresponding to Sky object.
-        
-        :param self: Description
-        :param hduname: Description
-        :type hduname: str
-        '''
-        thishdu = self.ImageHDU(hduname,
-                        np.zeros(self.imshape),
-                        self.wcs)
-        return thishdu
     
-    def initdata(self):
+    def initdata(self) -> None:
         '''
         Creates and populates data dictionary.
         
@@ -213,7 +198,7 @@ class Sky:
     def radec2lm_scalar(self,
                         coords      : SkyCoord,
                         phasecenter : None | SkyCoord = None,
-                        ):
+                        ) -> (float, float):
         # based on DDF function
         '''
         Docstring for radec2lm_scalar
@@ -244,7 +229,7 @@ class Sky:
              stokes=0,
              vmin: float=-8.e-5,
              vmax: float=2.e-4
-             ):
+             ) -> None:
         '''
         Function to show the current sky, requesting specific facet subsets
         
@@ -303,7 +288,7 @@ class Sky:
                     update_facets: list | str="all",
                     channel=0,
                     stokes=0,
-                    ):
+                    ) -> None:
         '''
         Function to update sky data with facet data.
         Can be done per data key and per facet section of the sky.
@@ -325,7 +310,7 @@ class Sky:
                     update_facets: list | str="all",
                     channel=0,
                     stokes=0,
-                    ):
+                    ) -> None:
         '''
         Function to update facet data with sky data.
         Can be done per data key and per facet.
@@ -350,7 +335,7 @@ class Sky:
  #                   self.facets[facetname].data[key] = self.data[key][sky_to_facet_regmask].reshape(self.facets[facetname].imshape)
 
     ### facet initialisation functionalities
-    def set_facet_pixgrid(self):
+    def set_facet_pixgrid(self) -> None:
         '''
         Docstring for set_facet_pixgrid
         
@@ -371,7 +356,7 @@ class Sky:
         
 
 
-    def generate_facet_regions(self):
+    def generate_facet_regions(self) -> (tuple, tuple):
         '''
         Function to generate region object for a given facet
         
@@ -394,7 +379,7 @@ class Sky:
         return facet_sky_regs,facet_grid_regs
 
 
-    def close(self):
+    def close(self) -> None:
         '''
         Docstring for close
         Close all HDU objects, free up virtual memory, exit gracefully.
@@ -411,7 +396,7 @@ class Sky:
                   filename:str,
                   key:str,
                   overwrite=False
-                  ):
+                  ) -> None:
         '''
         Generates HDU object from data and WCS for writing purposes
         
@@ -432,7 +417,7 @@ class Sky:
     def restoringbeam(self,
                       bmaj:u.Quantity,
                       bmin:u.Quantity,
-                      PA:float=0):
+                      PA:float=0) -> None:
         '''
         Generates restoring beam value for given grid
         
@@ -452,7 +437,7 @@ class Sky:
         test=1  
 
     def region(self, 
-               reg_visuals:dict):
+               reg_visuals:dict) -> (regions.RectangleSkyRegion, regions.PixelRegion):
         '''
         Returns region coverage of the sky. Used for overlap determinations.
         !!! CAREFUL !!! when initialising facets, the ORIGINAL SKY PHASECENTER gets used.......
@@ -470,7 +455,7 @@ class Sky:
         return sky_reg,grid_reg
 
 
-    def JonesRegions(self,njonesdir):
+    def JonesRegions(self,njonesdir) -> None:
         '''
         Function to associate regions for given Jones-direction.
         TO BE DONE
@@ -481,7 +466,7 @@ class Sky:
         # generates tessels (Jones facets)
         test=1
 
-    def wcs_input_dict(self,facet=False):
+    def wcs_input_dict(self,facet=False) -> dict:
         '''
         Docstring for wcs_input_dict
         This is the dictionary which defines the default WCS for our Sky object.
@@ -557,7 +542,7 @@ class Sky:
               object_serialisation:str="json",
               verbose:bool=True,
               overwrite:bool=True
-              ):
+              ) -> None:
         '''
         Function to write sky object as .fits files, with metadata
         preserved in JSON format. Individual facets are not written
@@ -593,7 +578,6 @@ class Sky:
         ...
         ### write requested data to fits
         # check for facet output
-        print("debug1")
         if write_facets is not None:
             # build directory for facet fits files
             facets_dir = pathlib.Path(basename+"_facets")
@@ -607,6 +591,7 @@ class Sky:
             self.WriteFits(filename=outfilename,
                            key=datakey,
                            overwrite=overwrite)
+            self.filename=outfilename
             if verbose:
                 print("Writing -- %8s -- sky data to  : %s"%(datakey,outfilename))
             if write_facets is not None:
@@ -620,6 +605,7 @@ class Sky:
                         self.facets[facet].WriteFits(filename=outfilename,
                                                      key=datakey,
                                                      overwrite=overwrite)
+                        self.facets[facet].filename=outfilename
                         if verbose:
                             print("Writing -- %8s -- facet data to: %s"%(datakey,outfilename))
                     elif verbose==True:
@@ -707,7 +693,7 @@ class Sky:
         return this_sky
 
 
-def generate_vertices(edges):
+def generate_vertices(edges) -> tuple:
     '''
     Generates vertices for given list of region edges.
     
@@ -730,7 +716,7 @@ def generate_vertices(edges):
             vertices.append(regions.PixCoord(x=verty,y=vertx))
     return vertices
 
-def MaskFromVertices(data,vertices):
+def MaskFromVertices(data,vertices) -> np.ndarray:
     '''
     Make a mask from given array + vertices.
     

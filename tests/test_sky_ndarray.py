@@ -42,9 +42,9 @@ test_sky_m31_cropped.write(basename="tests/serialisation_tests/test",
                            datakey="all",
                            verbose=True)
 
-print("debug2")
 # exit gracefully
 test_sky_m31_cropped.close()
+
 
 
 
