@@ -304,6 +304,11 @@ class Sky:
                     channel=0,
                     stokes=0,
                     ):
+        '''
+        Function to update sky data with facet data.
+        Can be done per data key and per facet section of the sky.
+        Does all datakeys and all sky by default
+        '''
         if update_facets=="all":
             update_facets = self.facets.keys()
         if datakey=="all":
@@ -321,6 +326,11 @@ class Sky:
                     channel=0,
                     stokes=0,
                     ):
+        '''
+        Function to update facet data with sky data.
+        Can be done per data key and per facet.
+        Does all datakeys and all facets by defaults
+        '''
         if update_facets=="all":
             update_facets = self.facets.keys()
         if datakey=="all":
