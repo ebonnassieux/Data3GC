@@ -58,12 +58,16 @@ def test_full_functionality():
     #p = pathlib.Path("tests/Data/M31-lowres-LOFAR.fits")
     filename=p.absolute().as_posix()
     test_sky_m31_cropped = Sky.from_fits(filename,
-                                        nfacets=5,
+                                        nfacets=3,
                                         skyname="M31_cropped")
     print("Sky initialised from fits")
+
+    test_sky_m31_cropped.update_facets("restored")
+
+
     # show full image
     test_sky_m31_cropped.show(vmin=-0.0005,vmax=0.0015)
-    edit_facets = [0,7]#,11,18,23]
+    edit_facets = [0,3,8]#,11,18,23]
     
     # show before noise is added
     test_sky_m31_cropped.show(plot_facets=list(edit_facets),vmin=-0.0005,vmax=0.0015)
@@ -76,7 +80,7 @@ def test_full_functionality():
             noisevals = float(i+1)*np.random.normal(loc=0,
                                                 scale=0.01,
                                                 size=this_facet_data.shape)
-            test_sky_m31_cropped.facets[key].data["restored"].values = 1.2*this_facet_data# + noisevals
+            test_sky_m31_cropped.facets[key].data["restored"].values = this_facet_data + noisevals
     print("Added noise to specified facets")
     test_sky_m31_cropped.show(plot_facets=list(edit_facets),vmin=-0.0005,vmax=0.0015)
     # update sky with facet information

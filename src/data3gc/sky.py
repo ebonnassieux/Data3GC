@@ -133,6 +133,7 @@ class Sky:
             self.facet_sky_regs,self.facet_grid_regs = self.generate_facet_regions()
             self.facets={}
             for facet_index in range(len(self.facet_grid_regs)):
+                # read facet initialisation params
                 facet_phasecenter = self.facet_phasecenters[facet_index]
                 facetname = facet_phasecenter.to_string('hmsdms')
                 verts = self.facetvertices[facet_index]
@@ -140,6 +141,7 @@ class Sky:
                 ymin,ymax = int(np.min(verts.y)),int(np.max(verts.y))
                 xlen = xmax-xmin
                 ylen = ymax-ymin
+                # initialise the facet as sky object
                 self.facets[facetname]=Sky(skyname=facetname,
                                         centrecoords=facet_phasecenter,
                                         npix=xlen,
@@ -155,9 +157,8 @@ class Sky:
                 self.facets[facetname].grid_reg =  self.facet_grid_regs[facet_index]
                 # define facet grid properties
                 self.facets[facetname].imshape = (len(freqs),len(stokes),xlen, ylen)
-                self.facets[facetname].wcs     = WCS(self.facets[facetname].wcs_input_dict(facet=True))
-                self.facets[facetname].gridwcs = self.facets[facetname].wcs.dropaxis(2).dropaxis(2)
-                self.facets[facetname].initdata()
+            
+                self.init_facet(facetname)
                 # generate mask from vertices.
                 verts = self.facetvertices[facet_index]
                 xmin,xmax = int(np.min(verts.x)),int(np.max(verts.x))
@@ -170,11 +171,8 @@ class Sky:
                 self.facets[facetname].xmax = xmax
                 self.facets[facetname].ymin = ymin
                 self.facets[facetname].ymax = ymax
-                # fill data
-            for key in self.data.keys():
-                self.update_facets()
-#                    self.facets[facetname].data[key] = self.data[key][ymin:ymax,xmin:xmax,:,:]#self.data[key][sky_to_facet_regmask].reshape(self.facets[facetname].imshape)
-#                    self.facets[facetname].data[key] = self.data[key].isel(x=slice(xmin,xmax),y=slice(ymin,ymax))
+            # read data from sky
+            self.update_facets()
 
 
     ### update sky with facet information
@@ -204,7 +202,9 @@ class Sky:
             raise ValueError("update_facets should be either 'all', a list of correct facet keys, or a corresponding list of indices.")
             
         if datakey == "all":
-            datakeys = self.datakeys
+            datakeys = list(self.datakeys)
+            print("Datakeys : ",datakeys)
+            stop
         else:
             datakeys = [datakey] if isinstance(datakey, str) else list(datakey)
         # update sky data from facet data using xarray indexing
@@ -278,18 +278,20 @@ class Sky:
             datakeys = self.datakeys
         else:
             datakeys = [datakey] if isinstance(datakey, str) else list(datakey)
+        print("update_facet datakeys",datakeys)
         # update facet data from sky data using the underlying ndarray buffer
         for facet_key in update_facets:
             facet = self.facets[facet_key]
             for datakey in datakeys:
+                # flippums needed to correctly add the data. mindbreaking
                 facet.data[datakey].data[channel,
                                           stokes,
                                           :,
                                           :] = self.data[datakey].data[channel,
                                                                        stokes,
-                                                                       facet.xmin:facet.xmax,
-                                                                       facet.ymin:facet.ymax]
-
+                                                                       facet.ymin:facet.ymax,
+                                                                       facet.xmin:facet.xmax].T
+                
 
     def radec2lm_scalar(self,
                         coords      : SkyCoord,
@@ -401,10 +403,9 @@ class Sky:
                         "model",
                         "mask",
                         "beam"]
-        empty_data = np.zeros(self.imshape)
         for key in self.datakeys:
             self.data[key] = xr.DataArray(
-                                        data=empty_data, 
+                                        data=np.zeros(self.imshape), 
                                         dims=["freq", 
                                               "stokes", 
                                               "x", 
@@ -421,7 +422,44 @@ class Sky:
                                             },
                                         name=key
                                         )
-        del(empty_data)
+
+    def init_facet(self,facetname) -> None:
+        '''
+        Initialises all facet properties for requested facet.
+        
+        :param self: Sky object
+ 
+        '''
+        
+        self.facets[facetname].wcs     = WCS(self.facets[facetname].wcs_input_dict(facet=True))
+        self.facets[facetname].gridwcs = self.facets[facetname].wcs.dropaxis(2).dropaxis(2)
+
+        self.facets[facetname].data={}
+        self.facets[facetname].datakeys = ["dirty",
+                                        "restored",
+                                        "residual",
+                                        "model",
+                                        "mask",
+                                        "beam"]
+        for key in self.datakeys:
+            self.facets[facetname].data[key] = xr.DataArray(
+                                        data=np.zeros(self.facets[facetname].imshape), 
+                                        dims=["freq", 
+                                              "stokes", 
+                                              "x", 
+                                              "y"],
+                                        coords={
+                                            "freq": self.freqs.value,
+                                            "stokes": self.stokes,
+                                            "x":np.arange(self.facets[facetname].npix),
+                                            "y":np.arange(self.facets[facetname].npix_y),
+                                            "ra":(("x", "y"), self.facets[facetname].ras.value),
+                                            "dec":(("x", "y"), self.facets[facetname].decs.value),
+                                            "l":(("x", "y"), self.facets[facetname].l),
+                                            "m":(("x", "y"), self.facets[facetname].m)
+                                            },
+                                        name=key
+                                        )
 
     
     def region(self, 
@@ -471,7 +509,7 @@ class Sky:
         self.bin_sizes_x   = self.bin_edges_x[1:] - self.bin_edges_x[:-1]
         self.bin_sizes_y   = self.bin_edges_y[1:] - self.bin_edges_y[:-1]
         
-        self.facetvertices = generate_vertices(self.bin_edges_x,self.bin_edges_y)
+        self.facetvertices = generate_vertices(self.bin_edges_y,self.bin_edges_x)
         # finish making widths list of len nfacets**2
         self.bin_sizes_x = np.tile(self.bin_sizes_x,self.nfacets)
         self.bin_sizes_y = np.tile(self.bin_sizes_y,self.nfacets)
@@ -711,7 +749,10 @@ class Sky:
             hdul = fits.open(filename)
             this_sky.data["restored"].data=hdul[hdu_n].data
             hdul.close()
+
+
         this_sky.update_facets()
+
         return this_sky
 
 
