@@ -209,11 +209,6 @@ class Sky:
             datakeys = [datakey] if isinstance(datakey, str) else list(datakey)
         # update sky data from facet data using xarray indexing
 
-        vmin=-8.e-5
-        vmax=2.e-4
-
-        plt.imshow(self.data[datakey][channel,stokes,:,:].data, vmin=vmin, vmax=vmax, origin='lower') 
-        plt.show()
 
         for facet_key in update_facets:
             facet = self.facets[facet_key]
@@ -236,18 +231,13 @@ class Sky:
 
                 self.data[datakey].isel(freq=channel,
                         stokes=stokes,
-                        x=slice(facet.xmin,facet.xmax),
-                        y=slice(facet.ymin,facet.ymax)
-                )[:] = facet.data[datakey].isel(freq=channel,stokes=stokes,x=slice(0,facet.npix),y=slice(0,facet.npix_y)).data
+                        x=slice(facet.ymin,facet.ymax),
+                        y=slice(facet.xmin,facet.xmax)
+                )[:] = facet.data[datakey].isel(freq=channel,stokes=stokes,x=slice(0,facet.npix),y=slice(0,facet.npix_y)).data.T
 
 
                 del(facet)
 
-
-
-
-        plt.imshow(self.data[datakey][channel,stokes,:,:].data, vmin=vmin, vmax=vmax, origin='lower') 
-        plt.show()
 
 
     def update_facets(self,

@@ -80,7 +80,7 @@ def test_full_functionality():
             noisevals = float(i+1)*np.random.normal(loc=0,
                                                 scale=0.01,
                                                 size=this_facet_data.shape)
-            test_sky_m31_cropped.facets[key].data["restored"].values = this_facet_data + noisevals
+            test_sky_m31_cropped.facets[key].data["restored"].values = this_facet_data + 0.1*noisevals
     print("Added noise to specified facets")
     test_sky_m31_cropped.show(plot_facets=list(edit_facets),vmin=-0.0005,vmax=0.0015)
     # update sky with facet information
