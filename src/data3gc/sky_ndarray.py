@@ -4,6 +4,8 @@
 # astropy
 # matplotlib
 # regions
+# pathlib
+# json
 
 import numpy as np
 # astropy functions
@@ -19,18 +21,13 @@ import regions
 import pathlib
 # for JSON serialisation
 import json
+# for xarray functionality
+import xarray as xr
 
 ### functionalities to add:
-###  - !!! read/write !!! super important
 ###  - generate Tessel layer for backwards compatibility
 ###  - group facets by Voronoi tesselation of Model data slice
 ###  - multisky (join Sky objects, show becomes healpix?)
-
-### below is experimental for Stokes. over-engineering in practice, but was a personal test.
-type StokesEigen = Literal['I','Q','U','V']
-from typing import Literal
-type Stokes = StokesEigen | tuple[StokesEigen] | tuple[StokesEigen, StokesEigen] | tuple[StokesEigen, StokesEigen, StokesEigen] | tuple[StokesEigen, StokesEigen, StokesEigen, StokesEigen]
-### TODO; below, change stokes back to a string of which we look for IQUV subsets...
 
 class Sky:
     '''
@@ -63,7 +60,7 @@ class Sky:
         '''
         # figure out what the print for the function returns.
         # Name, coords, resolution, shape?
-        print(self.phasecenter.to_string('hmsdms'))
+#        print(self.phasecenter.to_string('hmsdms'))
         return f"Sky({self.name}, ({self.phasecenter.to_string('hmsdms')}), {self.nfacets} facets"
 
     ### constructor
@@ -73,7 +70,7 @@ class Sky:
                  cellsize     : u.Quantity,
                  freqs        : list[u.Quantity],
                  nfacets      : int,
-                 stokes       : Stokes="I",
+                 stokes       : str="I",
                  skyname      : str="Sky",
                  ):
         '''
@@ -109,12 +106,6 @@ class Sky:
         self.imshape = (len(freqs),len(stokes),npix, npix)    
         self.wcs     = WCS(self.wcs_input_dict())
         self.gridwcs = self.wcs.dropaxis(2).dropaxis(2)
-        # initialise the data grids
-        self.initdata()
-
-#        ### DEBUG
-#        self.data["restored"] = fits.open("/home/ebonnassieux/OJ287_averaged_outer_uvcut_0.8arcsec-MFS-image.fits")[0].data
-
         # Initialise the coordinate grids in ra, dec and l,m
         coordgrid = np.meshgrid(np.arange(self.npix),np.arange(self.npix))
         # drop the Stokes, Freq axes for this
@@ -129,6 +120,12 @@ class Sky:
                               'linewidth':1}
         # initialise regions
         self.sky_reg,self.grid_reg = self.region(self.sky_visuals)
+        # initialise the data grids
+        self.initdata()
+
+#        ### DEBUG
+#        self.data["restored"] = fits.open("/home/ebonnassieux/OJ287_averaged_outer_uvcut_0.8arcsec-MFS-image.fits")[0].data
+
         if self.nfacets!=0:
             # initialise facet properties
             self.set_facet_pixgrid()
@@ -136,7 +133,7 @@ class Sky:
             self.facets={}
             for facet_index in range(len(self.facet_grid_regs)):
                 facet_phasecenter = self.facet_phasecenters[facet_index]
-                print(facet_phasecenter)
+#                print(facet_phasecenter)
                 facetname = facet_phasecenter.to_string('hmsdms')
                 verts = self.facetvertices[facet_index]
                 xmin,xmax = int(np.min(verts.x)),int(np.max(verts.x))
@@ -191,13 +188,15 @@ class Sky:
                 "model",
                 "mask",
                 "beam"]
+        empty_data = np.zeros(self.imshape)
         for key in self.datakeys:
-            self.data[key] = np.zeros(self.imshape)
+            self.data[key] = empty_data
+        del(empty_data)
 
     def radec2lm_scalar(self,
                         coords      : SkyCoord,
-                        phasecenter : None | SkyCoord = None,
-                        ) -> (float, float):
+                        phasecenter : SkyCoord = None,
+                        ) -> list[float, float]:
         # based on DDF function
         '''
         Docstring for radec2lm_scalar
@@ -355,7 +354,7 @@ class Sky:
         
 
 
-    def generate_facet_regions(self) -> (tuple, tuple):
+    def generate_facet_regions(self) -> list[tuple, tuple]:
         '''
         Function to generate region object for a given facet
         
@@ -436,7 +435,7 @@ class Sky:
         test=1  
 
     def region(self, 
-               reg_visuals:dict) -> (regions.RectangleSkyRegion, regions.PixelRegion):
+               reg_visuals:dict) -> list[regions.RectangleSkyRegion, regions.PixelRegion]:
         '''
         Returns region coverage of the sky. Used for overlap determinations.
         !!! CAREFUL !!! when initialising facets, the ORIGINAL SKY PHASECENTER gets used.......
