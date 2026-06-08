@@ -14,7 +14,6 @@ dependencies = [
     "numpy>=2.4.2",
     "python-casacore>=3.7.1",
     "regions>=0.11",
-    "xarray>=2026.4.0",
 ]
 
 [dependency-groups]
