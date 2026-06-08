@@ -7,8 +7,6 @@
 # pathlib
 # json
 
-from multiprocessing.resource_sharer import stop
-
 import numpy as np
 # astropy functions
 import astropy.units as u
@@ -173,8 +171,8 @@ class Sky:
                 self.facets[facetname].ymin = ymin
                 self.facets[facetname].ymax = ymax
                 # fill data
-                for key in self.data.keys():
-                    self.update_facets()
+            for key in self.data.keys():
+                self.update_facets()
 #                    self.facets[facetname].data[key] = self.data[key][ymin:ymax,xmin:xmax,:,:]#self.data[key][sky_to_facet_regmask].reshape(self.facets[facetname].imshape)
 #                    self.facets[facetname].data[key] = self.data[key].isel(x=slice(xmin,xmax),y=slice(ymin,ymax))
 
@@ -191,16 +189,66 @@ class Sky:
         Can be done per data key and per facet section of the sky.
         Does all datakeys and all sky by default
         '''
-        if update_facets=="all":
-            update_facets = self.facets.keys()
-        if datakey=="all":
-            datakeys=self.datakeys
+        # if no facets present, skip compute
+        if self.nfacets == 0:
+            return
+        # for "all" keys, update full lists
+        if update_facets == "all":
+            update_facets = list(self.facets.keys())
+        # if the update_facets are not in the facet keys, assume 
+        # a list of indices are provided, and update accordingly
+        elif update_facets[0] not in self.facets.keys() and type(update_facets[0])==int:
+            keylist = list(self.facets.keys())
+            update_facets = [keylist[i] for i in update_facets]
+        else:
+            raise ValueError("update_facets should be either 'all', a list of correct facet keys, or a corresponding list of indices.")
+            
+        if datakey == "all":
+            datakeys = self.datakeys
+        else:
+            datakeys = [datakey] if isinstance(datakey, str) else list(datakey)
+        # update sky data from facet data using xarray indexing
+
+        vmin=-8.e-5
+        vmax=2.e-4
+
+        plt.imshow(self.data[datakey][channel,stokes,:,:].data, vmin=vmin, vmax=vmax, origin='lower') 
+        plt.show()
+
         for facet_key in update_facets:
+            facet = self.facets[facet_key]
             for datakey in datakeys:
-                self.data[datakey][channel,
-                                   stokes,
-                                   self.facets[facet_key].ymin:self.facets[facet_key].ymax,
-                                   self.facets[facet_key].xmin:self.facets[facet_key].xmax] = self.facets[facet_key].data[datakey][channel,stokes,:,:]
+                # Select matching dimensions from both sky and facet
+                # self.data[datakey].data[channel,
+                #                         stokes,
+                #                         facet.xmin:facet.xmax,
+                #                         facet.ymin:facet.ymax] = (
+                #     facet.data[datakey].data[channel, stokes,:,:]
+                # )
+
+
+                ### this works
+                # self.data[datakey].isel(freq=channel,
+                #         stokes=stokes,
+                #         x=slice(facet.xmin,facet.xmax),
+                #         y=slice(facet.ymin,facet.ymax)
+                # )[:] = 0
+
+                self.data[datakey].isel(freq=channel,
+                        stokes=stokes,
+                        x=slice(facet.xmin,facet.xmax),
+                        y=slice(facet.ymin,facet.ymax)
+                )[:] = facet.data[datakey].isel(freq=channel,stokes=stokes,x=slice(0,facet.npix),y=slice(0,facet.npix_y)).data
+
+
+                del(facet)
+
+
+
+
+        plt.imshow(self.data[datakey][channel,stokes,:,:].data, vmin=vmin, vmax=vmax, origin='lower') 
+        plt.show()
+
 
     def update_facets(self,
                     datakey: list | str="all",
@@ -219,18 +267,28 @@ class Sky:
         # for "all" keys, update full lists
         if update_facets == "all":
             update_facets = list(self.facets.keys())
+        # if the update_facets are not in the facet keys, assume 
+        # a list of indices are provided, and update accordingly
+        elif update_facets[0] not in self.facets.keys() and type(update_facets[0])==int:
+            keylist = list(self.facets.keys())
+            update_facets = [keylist[i] for i in update_facets]
+        else:
+            raise ValueError("update_facets should be either 'all', a list of correct facet keys, or a corresponding list of indices.")
         if datakey == "all":
             datakeys = self.datakeys
         else:
             datakeys = [datakey] if isinstance(datakey, str) else list(datakey)
-        # update facet data from sky data using explicit xarray slicing
+        # update facet data from sky data using the underlying ndarray buffer
         for facet_key in update_facets:
             facet = self.facets[facet_key]
             for datakey in datakeys:
-                self.facets[facet_key].data[datakey].isel(freq=channel, stokes=stokes)[:] = self.data[datakey].isel(freq=channel,
-                                                                                                                stokes=stokes,
-                                                                                                                x=slice(self.facets[facet_key].xmin, self.facets[facet_key].xmax),
-                                                                                                                y=slice(self.facets[facet_key].ymin, self.facets[facet_key].ymax)).values             
+                facet.data[datakey].data[channel,
+                                          stokes,
+                                          :,
+                                          :] = self.data[datakey].data[channel,
+                                                                       stokes,
+                                                                       facet.xmin:facet.xmax,
+                                                                       facet.ymin:facet.ymax]
 
 
     def radec2lm_scalar(self,
@@ -291,11 +349,11 @@ class Sky:
         self.grid_reg.plot(ax=ax)
         if self.nfacets==0:
             # in this scenario, simply show the data and region
-            ax.imshow(self.data[datakey][channel,stokes,:,:], vmin=vmin, vmax=vmax, origin='lower')       
+            ax.imshow(self.data[datakey][channel,stokes,:,:].data, vmin=vmin, vmax=vmax, origin='lower')       
         else:
             if plot_facets=="all":
                 # only plot the facet grid
-                ax.imshow(self.data[datakey][channel,stokes,:,:], vmin=vmin, vmax=vmax, origin='lower')
+                ax.imshow(self.data[datakey][channel,stokes,:,:].data, vmin=vmin, vmax=vmax, origin='lower')
                 # plot the facet regions only. No facet-based overplot, since we want everything...
                 for facet_key in self.facets.keys():
                     self.facets[facet_key].grid_reg.plot(ax=ax)
@@ -308,14 +366,14 @@ class Sky:
                 # plot the individual facet grid + region
                 for facet_key in plotkeys:
                     this_facet = self.facets[facet_key]                    
-                    ax.imshow(this_facet.data[datakey][channel,stokes,:,:],
+                    ax.imshow(this_facet.data[datakey][channel,stokes,:,:].data,
                                     transform=ax.get_transform(this_facet.gridwcs),
                                     vmin=vmin, 
                                     vmax=vmax, 
                                     origin="lower")
                     this_facet.grid_reg.plot(ax=ax)
                 # underlay the full sky
-                ax.imshow(self.data[channel,stokes,:,:], vmin=vmin, vmax=vmax, origin='lower',alpha=0.1)
+                ax.imshow(self.data[datakey][channel,stokes,:,:].data, vmin=vmin, vmax=vmax, origin='lower',alpha=0.1)
         plt.show()
 
 
