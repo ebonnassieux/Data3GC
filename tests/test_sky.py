@@ -35,16 +35,21 @@ def test_sky_initialisation_facets():
     )
     test_sky_5facets.close()
 
-def test_sky():
-    test_sky_5facets = Sky(centrecoords=SkyCoord(45.*u.deg,45*u.deg,frame="fk5"),
-                   npix=256,
-                   cellsize=1*u.arcmin,
-                   freqs=[60]*u.MHz,
-                   nfacets=5,
-                   stokes="I",
-                   skyname="test_nenusky"
-    )
-    test_sky_5facets.show()
+
+
+def test_read_from_fits():
+    # initialise the sky object from test fits file
+    p = pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped.fits")
+    #p = pathlib.Path("tests/Data/M31-lowres-LOFAR.fits")
+    
+    filename=p.absolute().as_posix()
+    test_sky_m31_cropped = Sky.from_fits(filename,
+                                        nfacets=5,
+                                        skyname="M31_cropped")
+    print("Initialisation done, preparing show.")
+    test_sky_m31_cropped.show(vmin=-0.0005,vmax=0.0015)
+    test_sky_m31_cropped.close()
+    del(test_sky_m31_cropped)
 
 
 def test_full_functionality():
@@ -81,21 +86,6 @@ def test_full_functionality():
 
     # exit gracefully
     test_sky_m31_cropped.close()
-
-def test_read_from_fits():
-    # initialise the sky object from test fits file
-    p = pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped.fits")
-    #p = pathlib.Path("tests/Data/M31-lowres-LOFAR.fits")
-    
-    filename=p.absolute().as_posix()
-    test_sky_m31_cropped = Sky.from_fits(filename,
-                                        nfacets=5,
-                                        skyname="M31_cropped")
-    print("Initialisation done, preparing show.")
-    test_sky_m31_cropped.show(vmin=-0.0005,vmax=0.0015)
-    test_sky_m31_cropped.close()
-    del(test_sky_m31_cropped)
-
 
 if __name__=="__main__":
     # test initialisation from function call
