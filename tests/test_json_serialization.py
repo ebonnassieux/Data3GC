@@ -11,7 +11,8 @@ from astropy.coordinates import SkyCoord
 import sys
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent / "src"))
 
-from data3gc.sky_ndarray import Sky
+#from data3gc.sky_ndarray import Sky
+from data3gc.sky import Sky
 
 
 def test_sky_to_dict():
