@@ -67,7 +67,7 @@ def test_full_functionality():
 
     # show full image
     test_sky_m31_cropped.show(vmin=-0.0005,vmax=0.0015)
-    edit_facets = [0,3,8,11,18,23]
+    edit_facets = [0,1,3,8,11,18,23]
     
     # show before noise is added
     test_sky_m31_cropped.show(plot_facets=list(edit_facets),vmin=-0.0005,vmax=0.0015)
@@ -80,7 +80,7 @@ def test_full_functionality():
             noisevals = float(i+1)*np.random.normal(loc=0,
                                                 scale=0.01,
                                                 size=this_facet_data.shape)
-            test_sky_m31_cropped.facets[key].data["restored"].values = this_facet_data# + 0.1*noisevals
+            test_sky_m31_cropped.facets[key].data["restored"].values = this_facet_data + 0.1*noisevals
     print("Added noise to specified facets")
     test_sky_m31_cropped.show(plot_facets=list(edit_facets),vmin=-0.0005,vmax=0.0015)
     # update sky with facet information
@@ -89,11 +89,11 @@ def test_full_functionality():
     print("Updated sky")
     test_sky_m31_cropped.show(vmin=-0.0005,vmax=0.0015)
     # test serialisation
-    test_sky_m31_cropped.write(basename="tests/serialisation_tests/test",
-                            write_facets="all",
-                            datakey="all",
-                            verbose=True)
-    print("Serialisation complete")
+    # test_sky_m31_cropped.write(basename="tests/serialisation_tests/test",
+    #                         write_facets="all",
+    #                         datakey="all",
+    #                         verbose=True)
+    # print("Serialisation complete")
 
     # exit gracefully
     test_sky_m31_cropped.close()

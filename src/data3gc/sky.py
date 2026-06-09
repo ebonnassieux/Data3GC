@@ -231,8 +231,8 @@ class Sky:
 
                 self.data[datakey].isel(freq=channel,
                         stokes=stokes,
-                        x=slice(facet.ymin,facet.ymax),
-                        y=slice(facet.xmin,facet.xmax)
+                        x=slice(facet.xmin,facet.xmax),
+                        y=slice(facet.ymin,facet.ymax)
                 )[:] = facet.data[datakey].isel(freq=channel,stokes=stokes,x=slice(0,facet.npix),y=slice(0,facet.npix_y)).data
 
 
@@ -836,7 +836,8 @@ class Sky:
         # build centers
         bin_pixcoord_x = (self.bin_edges_x[:-1] + self.bin_edges_x[1:]) / 2
         bin_pixcoord_y = (self.bin_edges_y[:-1] + self.bin_edges_y[1:]) / 2
-        bin_centers_x,bin_centers_y  = np.meshgrid(bin_pixcoord_x,bin_pixcoord_y)
+        ### indices are switched below: this is normal, and due to np.meshgrid behaviour
+        bin_centers_y,bin_centers_x  = np.meshgrid(bin_pixcoord_x,bin_pixcoord_y)
         self.bin_centers = regions.PixCoord(x=bin_centers_x.ravel(),y=bin_centers_y.ravel())
         self.facet_phasecenters = self.bin_centers.to_sky(self.gridwcs)
 
