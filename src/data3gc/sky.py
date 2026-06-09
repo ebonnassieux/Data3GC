@@ -132,7 +132,6 @@ class Sky:
             self.facet_sky_regs,self.facet_grid_regs = self.generate_facet_regions()
             self.facets={}
             for facet_index in range(len(self.facet_grid_regs)):
-                print("facet_grid_reg",self.facet_grid_regs[facet_index])
                 # read facet initialisation params
                 facet_phasecenter = self.facet_phasecenters[facet_index]
                 facetname = facet_phasecenter.to_string('hmsdms')
@@ -192,7 +191,7 @@ class Sky:
             return
         # for "all" keys, update full lists
         if update_facets == "all":
-            update_facets = list(self.facets.keys())
+            update_facets = self.facets.keys()
         # if the update_facets are not in the facet keys, assume 
         # a list of indices are provided, and update accordingly
         elif update_facets[0] not in self.facets.keys() and type(update_facets[0])==int:
@@ -203,8 +202,6 @@ class Sky:
             
         if datakey == "all":
             datakeys = list(self.datakeys)
-            print("Datakeys : ",datakeys)
-            stop
         else:
             datakeys = [datakey] if isinstance(datakey, str) else list(datakey)
         # update sky data from facet data using xarray indexing
@@ -213,22 +210,6 @@ class Sky:
         for facet_key in update_facets:
             facet = self.facets[facet_key]
             for datakey in datakeys:
-                # Select matching dimensions from both sky and facet
-                # self.data[datakey].data[channel,
-                #                         stokes,
-                #                         facet.xmin:facet.xmax,
-                #                         facet.ymin:facet.ymax] = (
-                #     facet.data[datakey].data[channel, stokes,:,:]
-                # )
-
-
-                ### this works
-                # self.data[datakey].isel(freq=channel,
-                #         stokes=stokes,
-                #         x=slice(facet.xmin,facet.xmax),
-                #         y=slice(facet.ymin,facet.ymax)
-                # )[:] = 0
-
                 self.data[datakey].isel(freq=channel,
                         stokes=stokes,
                         x=slice(facet.xmin,facet.xmax),
@@ -236,7 +217,7 @@ class Sky:
                 )[:] = facet.data[datakey].isel(freq=channel,stokes=stokes,x=slice(0,facet.npix),y=slice(0,facet.npix_y)).data
 
 
-                del(facet)
+            del(facet)
 
 
 
@@ -268,7 +249,6 @@ class Sky:
             datakeys = self.datakeys
         else:
             datakeys = [datakey] if isinstance(datakey, str) else list(datakey)
-        print("update_facet datakeys",datakeys)
         # update facet data from sky data using the underlying ndarray buffer
         for facet_key in update_facets:
             facet = self.facets[facet_key]
@@ -394,11 +374,6 @@ class Sky:
                         "mask",
                         "beam"]
         
-        print("imshape     : ",self.imshape)
-        print("npix,npix_y : ",self.npix,self.npix_y)
-        print("ra.shape    : ",self.ras.shape)
-        print("dec.shape   : ",self.decs.shape)
-
         for key in self.datakeys:
             self.data[key] = xr.DataArray(
                                         data=np.zeros(self.imshape), 
@@ -1065,7 +1040,7 @@ class Sky:
                  baseimagename=filename.split(key)[0]
                  print("Image identified as containing %s; deriving base image name and populating sky with all available fits files."%key)
         if baseimagename==None:
-            print("Image string does not include data keyword; assume it is a %s image. All other data arrays will be empty."%default_data_type)
+#            print("Image string does not include data keyword; assume it is a %s image. All other data arrays will be empty."%default_data_type)
             hdul = fits.open(filename)
             this_sky.data["restored"].data=hdul[hdu_n].data
             hdul.close()

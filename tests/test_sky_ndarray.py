@@ -50,17 +50,17 @@ def test_read_from_fits():
 
 def test_full_functionality():
     # initialise the sky object from test fits file
-    #p = pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped.fits")
-    p = pathlib.Path("tests/Data/M31-lowres-LOFAR.fits")
+    p = pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-1.fits")
+    #p = pathlib.Path("/home/bonnassieux/Downloads/M31-lowres-LOFAR.fits")
     filename=p.absolute().as_posix()
     test_sky_m31_cropped = Sky.from_fits(filename,
-                                        nfacets=5,
+                                        nfacets=11,
                                         skyname="M31_cropped")
     # show full image
-    test_sky_m31_cropped.show(vmin=-0.0005,vmax=0.0015)
-    edit_facets = [0,7,11,18,23]
+#    test_sky_m31_cropped.show(vmin=-0.0005,vmax=0.0015)
+    edit_facets = [0,1,3,8,11,18,23]
     # show before noise is added
-    test_sky_m31_cropped.show(plot_facets=list(edit_facets),vmin=-0.0005,vmax=0.0015)
+#    test_sky_m31_cropped.show(plot_facets=list(edit_facets),vmin=-0.0005,vmax=0.0015)
     keylist = list(test_sky_m31_cropped.facets.keys())#[edit_facets]
     for i, key in enumerate(keylist):
         if i in edit_facets:
@@ -70,15 +70,15 @@ def test_full_functionality():
                                                 scale=0.01,
                                                 size=this_facet_data.shape)
             test_sky_m31_cropped.facets[key].data["restored"] = this_facet_data + noisevals
-    test_sky_m31_cropped.show(plot_facets=list(edit_facets),vmin=-0.0005,vmax=0.0015)
+#    test_sky_m31_cropped.show(plot_facets=list(edit_facets),vmin=-0.0005,vmax=0.0015)
     # update sky with facet information
     test_sky_m31_cropped.update_sky()
-    test_sky_m31_cropped.show(vmin=-0.0005,vmax=0.0015)
+#    test_sky_m31_cropped.show(vmin=-0.0005,vmax=0.0015)
     # test serialisation
-    test_sky_m31_cropped.write(basename="tests/serialisation_tests/test",
-                            write_facets="all",
-                            datakey="all",
-                            verbose=True)
+    # test_sky_m31_cropped.write(basename="tests/serialisation_tests/test",
+    #                         write_facets="all",
+    #                         datakey="all",
+    #                         verbose=True)
 
     # exit gracefully
     test_sky_m31_cropped.close()
@@ -128,7 +128,7 @@ if __name__=="__main__":
     # test initialisation from function call
 #    test_sky_initialisation()
     # test read from fits
-    test_read_from_fits()
+#    test_read_from_fits()
     # test fits file open, facet initialisation + manipulation, then save
-#    test_full_functionality()
+    test_full_functionality()
     

@@ -870,7 +870,7 @@ class Sky:
                  baseimagename=filename.split(key)[0]
                  print("Image identified as containing %s; deriving base image name and populating sky with all available fits files."%key)
         if baseimagename==None:
-            print("Image string does not include data keyword; assume it is a %s image. All other data arrays will be empty."%default_data_type)
+#            print("Image string does not include data keyword; assume it is a %s image. All other data arrays will be empty."%default_data_type)
             hdul = fits.open(filename)
             this_sky.data["restored"]=hdul[hdu_n].data
             hdul.close()
