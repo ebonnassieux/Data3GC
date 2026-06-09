@@ -111,8 +111,7 @@ class Sky:
         self.wcs     = WCS(self.wcs_input_dict())
         self.gridwcs = self.wcs.dropaxis(2).dropaxis(2)
         # initialise coords of data grids
-        ### the axes are switched here; this is by design. This is due to meshgrid behaviour.
-        coordgrid = np.meshgrid(np.arange(self.npix_y),np.arange(self.npix))
+        coordgrid = np.indices((self.npix,self.npix_y))
         # drop the Stokes, Freq axes for this
         self.ras, self.decs = self.gridwcs.all_pix2world(coordgrid[0],coordgrid[1],1)*u.deg
         # defin RA, Dec and l,m coords
@@ -133,6 +132,7 @@ class Sky:
             self.facet_sky_regs,self.facet_grid_regs = self.generate_facet_regions()
             self.facets={}
             for facet_index in range(len(self.facet_grid_regs)):
+                print("facet_grid_reg",self.facet_grid_regs[facet_index])
                 # read facet initialisation params
                 facet_phasecenter = self.facet_phasecenters[facet_index]
                 facetname = facet_phasecenter.to_string('hmsdms')
@@ -164,7 +164,7 @@ class Sky:
                 xmin,xmax = int(np.min(verts.x)),int(np.max(verts.x))
                 ymin,ymax = int(np.min(verts.y)),int(np.max(verts.y))
                 sky_to_facet_regmask = np.zeros(self.imshape).astype(bool)
-                sky_to_facet_regmask[:,:,ymin:ymax,xmin:xmax]=True
+                sky_to_facet_regmask[:,:,xmin:xmax,ymin:ymax]=True
                 self.facets[facetname].sky_to_facet_regmask = sky_to_facet_regmask
                 # add vertices info
                 self.facets[facetname].xmin = xmin
@@ -233,7 +233,7 @@ class Sky:
                         stokes=stokes,
                         x=slice(facet.ymin,facet.ymax),
                         y=slice(facet.xmin,facet.xmax)
-                )[:] = facet.data[datakey].isel(freq=channel,stokes=stokes,x=slice(0,facet.npix),y=slice(0,facet.npix_y)).data.T
+                )[:] = facet.data[datakey].isel(freq=channel,stokes=stokes,x=slice(0,facet.npix),y=slice(0,facet.npix_y)).data
 
 
                 del(facet)
@@ -279,8 +279,8 @@ class Sky:
                                           :,
                                           :] = self.data[datakey].data[channel,
                                                                        stokes,
-                                                                       facet.ymin:facet.ymax,
-                                                                       facet.xmin:facet.xmax].T
+                                                                       facet.xmin:facet.xmax,
+                                                                       facet.ymin:facet.ymax]
                 
 
     def radec2lm_scalar(self,
@@ -393,6 +393,12 @@ class Sky:
                         "model",
                         "mask",
                         "beam"]
+        
+        print("imshape     : ",self.imshape)
+        print("npix,npix_y : ",self.npix,self.npix_y)
+        print("ra.shape    : ",self.ras.shape)
+        print("dec.shape   : ",self.decs.shape)
+
         for key in self.datakeys:
             self.data[key] = xr.DataArray(
                                         data=np.zeros(self.imshape), 
@@ -822,7 +828,7 @@ class Sky:
         self.bin_sizes_x   = self.bin_edges_x[1:] - self.bin_edges_x[:-1]
         self.bin_sizes_y   = self.bin_edges_y[1:] - self.bin_edges_y[:-1]
         
-        self.facetvertices = generate_vertices(self.bin_edges_y,self.bin_edges_x)
+        self.facetvertices = generate_vertices(self.bin_edges_x,self.bin_edges_y)
         # finish making widths list of len nfacets**2
         self.bin_sizes_x = np.tile(self.bin_sizes_x,self.nfacets)
         self.bin_sizes_y = np.tile(self.bin_sizes_y,self.nfacets)
@@ -1079,25 +1085,20 @@ def generate_vertices(edges,
     
     '''
     vertices=[]
+    if edges_y is None:
+        edges_y=edges
     for ifacet in range(len(edges)-1):
-        for jfacet in range(len(edges)-1):
+        for jfacet in range(len(edges_y)-1):
             vertx = [edges[ifacet],
                     edges[ifacet+1],
                     edges[ifacet+1],
                     edges[ifacet]
                     ]
-            if edges_y is None:
-                verty = [edges[jfacet],
-                        edges[jfacet],
-                        edges[jfacet+1],
-                        edges[jfacet+1]
-                        ]
-            else:
-                verty = [edges_y[jfacet],
-                        edges_y[jfacet],
-                        edges_y[jfacet+1],
-                        edges_y[jfacet+1]
-                        ]
+            verty = [edges_y[jfacet],
+                    edges_y[jfacet],
+                    edges_y[jfacet+1],
+                    edges_y[jfacet+1]
+                    ]
             vertices.append(regions.PixCoord(x=verty,y=vertx))
     return vertices
 
