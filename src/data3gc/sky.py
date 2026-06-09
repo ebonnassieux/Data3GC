@@ -470,6 +470,17 @@ class Sky:
         grid_reg = sky_reg.to_pixel(self.gridwcs)
         return sky_reg,grid_reg
     
+    def JonesRegions(self,njonesdir) -> None:
+        '''
+        Function to associate regions for given Jones-direction.
+        TO BE DONE
+        
+        :param self: Description
+        :param njonesdir: Description
+        '''
+        # generates tessels (Jones facets)
+        test=1
+    
     def close(self) -> None:
         '''
         Docstring for close
@@ -482,6 +493,318 @@ class Sky:
 #        self.residual.close()
 #        self.model.close()
 #        self.mask.close()
+
+
+    def write(self,
+              basename:str=None,
+              write_facets:list|str=None,
+              datakey:list|str="all",
+              object_serialisation:str="json",
+              verbose:bool=True,
+              overwrite:bool=True
+              ) -> None:
+        '''
+        Function to write sky object as .fits files, with metadata
+        preserved in JSON format. Individual facets are not written
+        to fits by default; can write either all or some by requesting
+        their facetnames. If you wish to write metadata ONLY (e.g. instantiate
+        sky object from output of imaging run), set datakey to None.
+        '''
+        # initialise write parameters for this call
+        if basename==None:
+            basename=self.name
+        if datakey=="all":
+            datakeys=self.datakeys
+        elif datakey==None:
+            datakeys=[]
+        else:
+            datakeys=datakey
+        if self.nfacets==0:
+            write_facets=None
+        # check if basename includes path; create it if absent
+        if "/" in basename:
+            # if basename *is* a path, append skyname
+            if basename[-1]=="/":
+                writepath=pathlib.Path(basename)
+                basename+=self.name
+            else:
+                # otherwise, get the writepath out of basename
+                writepath=pathlib.Path(basename[0:-len(basename.split("/")[-1])])
+            if pathlib.Path.is_dir(writepath)==False:
+                pathlib.Path.mkdir(writepath)
+        if verbose:
+            print("Serialising %s in %s"%(self.name,writepath))
+        # serialise metadata
+        if object_serialisation=="json":
+            self.to_json_file(filename=basename+".json")
+        ### write requested data to fits
+        # check for facet output
+        if write_facets is not None:
+            # build directory for facet fits files
+            facets_dir = pathlib.Path(basename+"_facets")
+            if pathlib.Path.is_dir(facets_dir)==False:
+                pathlib.Path.mkdir(facets_dir)
+            facets_dir=facets_dir.as_posix()
+            if verbose:
+                print("Writing facets fits files to: %s"%facets_dir)
+        for datakey in datakeys:
+            outfilename=basename+"."+datakey+".fits"
+            self.WriteFits(filename=outfilename,
+                           key=datakey,
+                           overwrite=overwrite)
+            self.filename=outfilename
+            if verbose:
+                print("Writing -- %8s -- sky data to  : %s"%(datakey,outfilename))
+            if write_facets is not None:
+                # if all facets requested, write all facets
+                if write_facets=="all":
+                    write_facets=self.facets.keys()
+                # write requested facets
+                for facet in write_facets:
+                    if facet in self.facets:
+                        outfilename=facets_dir+"/"+facet.replace(" ","_")+"."+datakey+".fits"
+                        self.facets[facet].WriteFits(filename=outfilename,
+                                                     key=datakey,
+                                                     overwrite=overwrite)
+                        self.facets[facet].filename=outfilename
+                        if verbose:
+                            print("Writing -- %8s -- facet data to: %s"%(datakey,outfilename))
+                    elif verbose==True:
+                        print("Count not find requested facet %s for sky %s"%(facet,self.name))
+        # print output to notify user
+        if verbose:
+            print("Serialisation of %s complete."%self.name)
+
+    def WriteFits(self,
+                  filename:str,
+                  key:str,
+                  overwrite=False
+                  ) -> None:
+        '''
+        Generates HDU object from data and WCS for writing purposes
+        
+        :param self: class Sky
+        :param name: Name of the HDU, restored, residual, model etc
+        :type name: str
+        :param data: data to put in the HDU
+        :type data: np.ndarray
+        :param wcs: WCS of the HDU
+        :type wcs: WCS
+        '''
+        this_hdu      = fits.PrimaryHDU(data=self.data[key].data, 
+                                        header=self.wcs.to_header())
+        writepath = pathlib.Path(filename)
+        this_hdu.writeto(writepath,overwrite=overwrite)
+        del(this_hdu)
+
+    def to_dict(self, 
+                include_data:bool=False) -> dict:
+        '''
+        Converts Sky object to a dictionary for JSON serialization.
+        
+        :param self: Sky object
+        :param include_data: set to True to include image data in the dict itself. Defaults to False
+        :type include_data: bool
+        :return: Dictionary representation current Sky object
+        :rtype: dict
+        '''
+        sky_dict = {
+            "name": self.name,
+            "phasecenter": {
+                "ra": self.phasecenter.ra.deg,
+                "dec": self.phasecenter.dec.deg,
+                "unit": "deg"
+            },
+            "npix": int(self.npix),
+            "cellsize": {
+                "value": float(self.cellsize.value),
+                "unit": str(self.cellsize.unit)
+            },
+            "freqs": [
+                {"value": float(freq.value), "unit": str(freq.unit)}
+                for freq in self.freqs
+            ],
+            "nfacets": int(self.nfacets),
+            "stokes": list(self.stokes) if isinstance(self.stokes, tuple) else [self.stokes],
+            "imshape": list(self.imshape),
+            "wcs": self.wcs.to_header().tostring() if self.wcs else None,
+        }
+        
+        if include_data:
+            # also serialize image data arrays. Bad idea but better to futureproof...
+            sky_dict["data"] = {}
+            for key, value in self.data.items():
+                if isinstance(value, np.ndarray):
+                    sky_dict["data"][key] = {
+                        "array": value.tolist(),
+                        "dtype": str(value.dtype),
+                        "shape": list(value.shape)
+                    }
+        
+        # serialise facets. Add data here too if requested.
+        if self.nfacets != 0 and self.facets:
+            sky_dict["facets"] = {
+                facet_name: facet.to_dict(include_data=include_data)
+                for facet_name, facet in self.facets.items()
+            }
+        
+        return sky_dict
+
+    def to_json(self, 
+                include_data:bool=False, 
+                indent:int=2) -> str:
+        '''
+        Generate JSON.dumps string for this Sky
+        
+        :param self: Sky object
+        :param include_data: Whether to include image data arrays. Default True.
+        :type include_data: bool
+        :param indent: JSON indentation level. Default 2.
+        :type indent: int
+        :return: JSON string representation
+        :rtype: str
+        '''
+        sky_dict = self.to_dict(include_data=include_data)
+        return json.dumps(sky_dict, indent=indent)
+
+    def to_json_file(self, 
+                     filename: str, 
+                     include_data:bool=False,
+                     overwrite:bool=True,
+                     indent:int=2) -> None:
+        '''
+        Write Sky object to JSON file.
+        
+        :param self: Sky object
+        :param filename: Output filename
+        :type filename: str
+        :param include_data: include data values in JSON file. Default False.
+        :type include_data: bool
+        :param overwrite: overwrite existing file if present. Default True.
+        :type overwrite: bool
+        :param indent: JSON indentation level. Default 2.
+        :type indent: int
+        '''
+        filepath = pathlib.Path(filename)
+        if filepath.exists() and not overwrite:
+            raise FileExistsError(f"File {filename} already exists. Set overwrite=True to overwrite.")
+        sky_dict = self.to_dict(include_data=include_data)
+        with open(filepath, 'w') as f:
+            json.dump(sky_dict, f, indent=indent)
+
+    @classmethod
+    def from_dict(cls, sky_dict: dict) -> 'Sky':
+        '''
+        Create Sky object from dictionary.
+        Image data must be re-loaded separately from fits, or saved in serialisation.
+        Fits filenames will be present in the dict.
+        
+        :param sky_dict: Dictionary with Sky parameters
+        :type sky_dict: dict
+        :return: Sky object
+        :rtype: Sky
+        '''
+        # Extract basic parameters
+        centrecoords = SkyCoord(
+            ra=sky_dict["phasecenter"]["ra"] * u.deg,
+            dec=sky_dict["phasecenter"]["dec"] * u.deg
+        )
+        npix = sky_dict["npix"]
+        cellsize = u.Quantity(sky_dict["cellsize"]["value"], sky_dict["cellsize"]["unit"])
+        
+        # Reconstruct frequencies
+        freqs = [
+            u.Quantity(freq["value"], freq["unit"])
+            for freq in sky_dict["freqs"]
+        ]
+        
+        nfacets = sky_dict["nfacets"]
+        stokes = tuple(sky_dict["stokes"]) if len(sky_dict["stokes"]) > 1 else sky_dict["stokes"][0]
+        skyname = sky_dict.get("name", "Sky")
+        
+        # Create Sky object
+        this_sky = cls(
+            centrecoords=centrecoords,
+            npix=npix,
+            cellsize=cellsize,
+            freqs=freqs,
+            nfacets=nfacets,
+            stokes=stokes,
+            skyname=skyname
+        )
+        
+        # Load image data if present
+        if "data" in sky_dict and sky_dict["data"]:
+            for key, data_info in sky_dict["data"].items():
+                if isinstance(data_info, dict) and "array" in data_info:
+                    this_sky.data[key] = np.array(
+                        data_info["array"],
+                        dtype=np.dtype(data_info["dtype"])
+                    )
+        
+        # Load facets if present
+        if "facets" in sky_dict and sky_dict["facets"]:
+            for facet_name, facet_dict in sky_dict["facets"].items():
+                facet_sky = cls.from_dict(facet_dict)
+                this_sky.facets[facet_name] = facet_sky
+        
+        return this_sky
+
+    @classmethod
+    def from_json(cls, json_string: str) -> 'Sky':
+        '''
+        Instantiate Sky object from JSON string.
+        
+        :param json_string: JSON string representation of Sky
+        :type json_string: str
+        :return: Sky object
+        :rtype: Sky
+        '''
+        sky_dict = json.loads(json_string)
+        return cls.from_dict(sky_dict)
+
+    @classmethod
+    def from_json_file(cls, filename: str) -> 'Sky':
+        '''
+        Load Sky object from JSON file.
+        
+        :param filename: Input JSON filename
+        :type filename: str
+        :return: Sky object
+        :rtype: Sky
+        '''
+        filepath = pathlib.Path(filename)
+        
+        if not filepath.exists():
+            raise FileNotFoundError(f"File {filename} not found.")
+        
+        with open(filepath, 'r') as f:
+            sky_dict = json.load(f)
+        
+        return cls.from_dict(sky_dict)
+
+
+    def restoringbeam(self,
+                      bmaj:u.Quantity,
+                      bmin:u.Quantity,
+                      PA:float=0) -> None:
+        '''
+        Generates restoring beam value for given grid
+        
+        :param self: Description
+        :param bmaj: Description
+        :type bmaj: u.Quantity
+        :param bmin: Description
+        :type bmin: u.Quantity
+        :param PA: Description
+        :type PA: float
+        '''
+        # restoring beam gaussian
+        # call as a function to initialise on-the-fly
+        self.bmaj=bmaj.rad
+        self.bmin=bmin.rad
+        self.PA=PA
+        test=1  
     
     def set_facet_pixgrid(self) -> None:
         '''
