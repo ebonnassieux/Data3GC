@@ -428,7 +428,6 @@ class Sky:
                                                 width =self.npix,
                                                 height=self.npix_y,
                                                 visual=reg_visuals)
-        print("DEBUG - grid_reg",grid_reg)
         sky_reg = grid_reg.to_sky(sky_gridwcs)
         return sky_reg,grid_reg
     
@@ -807,9 +806,7 @@ class Sky:
         ref_pixels = [round(0.5*self.npix)+1,
                     round(0.5*self.npix_y)+1,
                     1.,
-                    1.]
-        print("ref_pixels",ref_pixels)
-                
+                    1.]                
         ref_crvals = [self.phasecenter.ra.to(u.deg).value,
                       self.phasecenter.dec.to(u.deg).value,
                       self.freqs[0].value,
