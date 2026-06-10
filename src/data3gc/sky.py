@@ -70,7 +70,7 @@ class Sky:
         return f"Sky({self.name}, ({self.phasecenter.to_string('hmsdms')}), {self.nfacets} facets"
     
     ### constructor
-   #@timer  
+    @timer  
     def __init__(self,
                  centrecoords : SkyCoord,
                  npix         : int,
@@ -122,7 +122,6 @@ class Sky:
         # base shape on xradio schema 
         # https://github.com/casangi/xradio/blob/470-changes-needed-for-astroviper/docs/source/image_data/tutorials/image_schema_proposal.ipynb
         self.imshape = (len(freqs),len(stokes),npix, self.npix_y)
-        print("imshape",self.imshape)
         # # initialise coords of data grids
         self.make_coord_grids()
         # initialise the data grids
@@ -132,18 +131,19 @@ class Sky:
             # initialise facet properties
             self.set_facet_pixgrid()
             for facet_index in range(len(self.facet_phasecenters)):
+                # debug
+                print()
+                print("Initialisation of facet",facet_index)
                 # read facet initialisation params
                 facet_phasecenter = self.facet_phasecenters[facet_index]
                 facetname = facet_phasecenter.to_string('hmsdms')
                 verts = self.facetvertices[facet_index]
                 xmin,xmax = int(np.min(verts.x)),int(np.max(verts.x))
                 ymin,ymax = int(np.min(verts.y)),int(np.max(verts.y))
-                xlen = xmax-xmin
-                ylen = ymax-ymin
                 # initialise the facet as sky object
                 self.facets[facetname]=Sky(skyname=facetname,
                                         centrecoords=facet_phasecenter,
-                                        npix=xlen,
+                                        npix=xmax-xmin,
                                         npix_y=ymax-ymin,
                                         cellsize=cellsize,
                                         freqs=freqs,
@@ -160,14 +160,12 @@ class Sky:
                 self.facets[facetname].xmax = xmax
                 self.facets[facetname].ymin = ymin
                 self.facets[facetname].ymax = ymax
-                # debug
-                self.facets[facetname].xlen = xlen
-                self.facets[facetname].ylen = ylen
-                self.facets[facetname].verts = verts
+                print("x middle : ",0.5*(xmax-xmin)+xmin)
+                print("y middle : ",0.5*(ymax-ymin)+ymin)
         
                 
     ### update sky with facet information
-    #@timer
+    @timer
     def update_sky(self,
                     datakey: list | str="all",
                     update_facets: list | str="all",
@@ -209,7 +207,7 @@ class Sky:
 
 
 
-    #@timer
+    @timer
     def update_facets(self,
                     datakey: list | str="all",
                     update_facets: list | str="all",
@@ -241,17 +239,6 @@ class Sky:
         # update facet data from sky data using the underlying ndarray buffer
         for facet_key in update_facets:
             facet = self.facets[facet_key]
-            print()
-            print("facet imshape     :",facet.imshape)
-            print("facet data imshape:",facet.data["restored"].data.shape)
-            print("target datashape  :",facet.data["restored"].data[channel,stokes,:,:].shape)
-            print("input datashape   :",self.data["restored"].data[channel,
-                                                                       stokes,
-                                                                       facet.xmin:facet.xmax,
-                                                                       facet.ymin:facet.ymax+100].shape)
-            print("verts             :",facet.verts)
-            print("x",facet.xmin,facet.xmax,"dx",facet.xmax-facet.xmin,facet.xlen)
-            print("y",facet.ymin,facet.ymax,"dy",facet.ymax-facet.ymin,facet.ylen)
             for datakey in datakeys:
                 facet.data[datakey].data[channel,
                                           stokes,
@@ -263,7 +250,7 @@ class Sky:
         del(facet)
                 
 
-   #@timer
+    #@timer
     def radec2lm_scalar(self,
                         coords      : SkyCoord,
                         phasecenter : SkyCoord = None,
@@ -292,7 +279,7 @@ class Sky:
 
         return l,m
     
-   #@timer
+    @timer
     def make_coord_grids(self):
         self.wcs     = WCS(self.wcs_input_dict())
         self.gridwcs = self.wcs.dropaxis(2).dropaxis(2)
@@ -343,7 +330,11 @@ class Sky:
         self.grid_reg.plot(ax=ax)
         if self.nfacets==0:
             # in this scenario, simply show the data and region
-            ax.imshow(self.data[datakey][channel,stokes,:,:].data, vmin=vmin, vmax=vmax, origin='lower')       
+            ax.imshow(self.data[datakey][channel,stokes,:,:].data, 
+                      vmin=vmin, 
+                      vmax=vmax, 
+                      origin='lower',
+                      transform=ax.get_transform(this_facet.gridwcs))    
         else:
             if plot_facets=="all":
                 # only plot the facet grid
@@ -365,13 +356,19 @@ class Sky:
                                     vmin=vmin, 
                                     vmax=vmax, 
                                     origin="lower")
+                    # add the facet region
                     this_facet.grid_reg.plot(ax=ax)
                 # underlay the full sky
-                ax.imshow(self.data[datakey][channel,stokes,:,:].data, vmin=vmin, vmax=vmax, origin='lower',alpha=0.1)
+                ax.imshow(self.data[datakey][channel,stokes,:,:].data, 
+                          vmin=vmin, 
+                          vmax=vmax, 
+                          origin='lower',
+                          alpha=0.1,
+                          transform=ax.get_transform(this_facet.gridwcs))
         plt.show()
 
 
-    #@timer
+    @timer
     def initdata(self) -> None:
         '''
         Creates and populates data dictionary.
@@ -411,25 +408,41 @@ class Sky:
             self.data[key].name=key
         del(facet_xarr)
 
-   #@timer
+    #@timer
     def region(self,
                center_coords:SkyCoord,
                sky_gridwcs:WCS,
                reg_visuals:dict) -> list[regions.RectangleSkyRegion, regions.PixelRegion]:
         '''
         Returns region coverage of the sky. Used for overlap determinations.
-        !!! CAREFUL !!! when initialising facets, the ORIGINAL SKY PHASECENTER gets used.......
 
         :param self: Description
         :param reg_visuals: Description
         :type reg_visuals: dict
         '''
-        sky_reg  = regions.RectangleSkyRegion(center=center_coords, 
-                                              width=self.cellsize*(self.npix_y), 
-                                              height=self.cellsize*(self.npix),
-                                              visual=reg_visuals
-                                              )
-        grid_reg = sky_reg.to_pixel(sky_gridwcs)
+        
+
+        pix_x, pix_y = sky_gridwcs.wcs_world2pix(
+                                center_coords.ra.deg,
+                                center_coords.dec.deg,
+                                0,          # origin=1 due to FITS-style counting
+                            )
+
+        pix_center = regions.PixCoord(x=pix_x, y=pix_y)
+        grid_reg = regions.RectanglePixelRegion(center=pix_center,
+                                                width =self.npix,
+                                                height=self.npix_y,
+                                                visual=reg_visuals)
+        print("DEBUG - grid_reg",grid_reg)
+        sky_reg = grid_reg.to_sky(sky_gridwcs)
+
+
+        # sky_reg  = regions.RectangleSkyRegion(center=center_coords, 
+        #                                       width=self.cellsize*(self.npix_y), 
+        #                                       height=self.cellsize*(self.npix),
+        #                                       visual=reg_visuals
+        #                                       )
+        # grid_reg = sky_reg.to_pixel(sky_gridwcs)
         return sky_reg,grid_reg
     
     def JonesRegions(self,njonesdir) -> None:
@@ -790,9 +803,10 @@ class Sky:
         bin_centers_y,bin_centers_x  = np.meshgrid(bin_pixcoord_x,bin_pixcoord_y)
         bin_centers = regions.PixCoord(x=bin_centers_x.ravel(),y=bin_centers_y.ravel())
         self.facet_phasecenters = bin_centers.to_sky(self.gridwcs)
+        self.facet_phasecenters_pix = bin_centers
 
   
-    def wcs_input_dict(self,facet=False) -> dict:
+    def wcs_input_dict(self) -> dict:
         '''
         Docstring for wcs_input_dict
         This is the dictionary which defines the default WCS for our Sky object.
@@ -803,16 +817,11 @@ class Sky:
         ### add 1 due to FITS convention count starting at 1 rather than 0
         ### i.e. Fortran-style rather than C-style. This is also why the other
         ### values are set to 1 rather than 0.
-        if facet==True:
-             ref_pixels = [round(0.5*self.npix)+1,
-                           round(0.5*self.npix_y)+1,
-                           1.,
-                           1.]
-        else:
-            ref_pixels = [round(0.5*self.npix)+1,
-                        round(0.5*self.npix_y)+1,
-                        1.,
-                        1.]
+        ref_pixels = [round(0.5*self.npix)+1,
+                    round(0.5*self.npix_y)+1,
+                    1.,
+                    1.]
+        print("ref_pixels",ref_pixels)
                 
         ref_crvals = [self.phasecenter.ra.to(u.deg).value,
                       self.phasecenter.dec.to(u.deg).value,

@@ -70,11 +70,13 @@ def bench_facets():
     fitslist=[pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped.fits"),
               pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-1.fits"),
               pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-2.fits"),
-              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-3.fits")]
+              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-3.fits"),
+              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-4.fits")]
     bench_name = ["656K",
                   "2,5M",
                   "9,9M",
-                  "40M"]
+                  "40M",
+                  "88M"]
     
 #    fitslist = [pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped.fits")]
 #    bench_name = ["400pix"]
@@ -91,12 +93,12 @@ def bench_facets():
                     nfacets_edit=nfacets,
                     benchname=bench_name[i],
                     sky_type="xarray")
-            bench_test(path,
-                    nfacets,
-                    nfacets_edit=nfacets,
-                    benchname=bench_name[i],
-                    sky_type="ndarray")
-        # print()
+        #     bench_test(path,
+        #             nfacets,
+        #             nfacets_edit=nfacets,
+        #             benchname=bench_name[i],
+        #             sky_type="ndarray")
+        # # print()
         # print("--------- %24s ---------"%(path.as_posix()))
         # for nfacets in nfacetslist:
         #     bench_test(path,

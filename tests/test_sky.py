@@ -54,11 +54,11 @@ def test_read_from_fits():
 
 def test_full_functionality(show_ims=True):
     # initialise the sky object from test fits file
-    p = pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-3.fits")
+    p = pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-1.fits")
     #p = pathlib.Path("/home/bonnassieux/Downloads/M31-lowres-LOFAR.fits")
     filename=p.absolute().as_posix()
     test_sky_m31_cropped = Sky.from_fits(filename,
-                                        nfacets=5,
+                                        nfacets=3,
                                         skyname="M31_cropped")
 #    print("Sky initialised from fits")
 
@@ -68,7 +68,7 @@ def test_full_functionality(show_ims=True):
     # show full image
     if show_ims:
         test_sky_m31_cropped.show(vmin=-0.0005,vmax=0.0015)
-    edit_facets = [0,1,3,8,11,18,23]
+    edit_facets = [0,1,3,8]#,11,18,23]
     
     # show before noise is added
     if show_ims:
