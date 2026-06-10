@@ -159,10 +159,8 @@ class Sky:
                 self.facets[facetname].ymax = ymax
         
                 
-
-
     ### update sky with facet information
-   #@timer
+    #@timer
     def update_sky(self,
                     datakey: list | str="all",
                     update_facets: list | str="all",
@@ -204,7 +202,7 @@ class Sky:
 
 
 
-   #@timer
+    #@timer
     def update_facets(self,
                     datakey: list | str="all",
                     update_facets: list | str="all",
@@ -270,7 +268,6 @@ class Sky:
         refdec = self.phasecenter.dec.rad
         ras    = coords.ra.rad
         decs   = coords.dec.rad
-
 
         l = np.cos(decs) * np.sin(ras - refra)
         m = np.sin(decs) * np.cos(refdec) - np.cos(decs) * np.sin(refdec) * np.cos(ras - refra)
@@ -356,17 +353,7 @@ class Sky:
         plt.show()
 
 
-
-
-
-
-
-
-
-
-
-
-   #@timer
+    #@timer
     def initdata(self) -> None:
         '''
         Creates and populates data dictionary.
@@ -381,7 +368,6 @@ class Sky:
                         "model",
                         "mask",
                         "beam"]
-        
         dims=["freq", 
             "stokes", 
             "x", 
@@ -396,7 +382,6 @@ class Sky:
                 "l":(("x", "y"), self.l),
                 "m":(("x", "y"), self.m)
                 }
-
         facet_xarr = xr.DataArray(data=np.zeros(self.imshape), 
                                   dims=dims,
                                   coords=coords,
@@ -408,34 +393,6 @@ class Sky:
             self.data[key].name=key
         del(facet_xarr)
 
-
-#    #@timer
-#     def init_facet(self,facetname) -> None:
-#         '''
-#         Initialises all facet properties for requested facet.
-        
-#         :param self: Sky object
- 
-#         '''
-        
-#         self.facets[facetname].wcs     = WCS(self.facets[facetname].wcs_input_dict(facet=True))
-#         self.facets[facetname].gridwcs = self.facets[facetname].wcs.dropaxis(2).dropaxis(2)
-
-#         self.facets[facetname].data={}
-#         self.facets[facetname].datakeys = ["dirty",
-#                                         "restored",
-#                                         "residual",
-#                                         "model",
-#                                         "mask",
-#                                         "beam"]
-#         xmin = self.facets[facetname].xmin
-#         xmax = self.facets[facetname].xmax
-#         ymin = self.facets[facetname].ymin
-#         ymax = self.facets[facetname].ymax
-#         for key in self.datakeys:
-#             self.facets[facetname].data[key] = self.data[key].isel(x=slice(xmin, xmax), y=slice(ymin, ymax))
-
-    
    #@timer
     def region(self,
                center_coords:SkyCoord,
@@ -962,11 +919,13 @@ class Sky:
                     fits_freqs *= u.Unit(hdu.header["CUNIT"+freqaxis])
         # check for radio-style shape
         if len(fits_data.shape)==4:
-            fits_npix = max(fits_data.shape[2],fits_data.shape[3])
+            fits_npix_x = fits_data.shape[2]
+            fits_npix_y = fits_data.shape[3]
             fits_style="radio"
             # read centrecoords from fits
-            centrepixcoord = round(fits_npix/2)
-            centreskycoords = fits_wcs.pixel_to_world(centrepixcoord,centrepixcoord,0,0)
+            centrepixcoord_x = round(fits_npix_x/2)
+            centrepixcoord_y = round(fits_npix_y/2)
+            centreskycoords = fits_wcs.pixel_to_world(centrepixcoord_x,centrepixcoord_y,0,0)
         else:
             fits_npix = max(fits_data.shape[0],fits_data.shape[1])
             fits_style="optical"
@@ -981,7 +940,8 @@ class Sky:
         hdul.close()
         this_sky = Sky(skyname=skyname,
                        centrecoords=fits_centrecoords,
-                       npix=fits_npix,
+                       npix=fits_npix_x,
+                       npix_y=fits_npix_y,
                        cellsize=fits_cellsize,
                        freqs=fits_freqs,
                        nfacets=nfacets,
