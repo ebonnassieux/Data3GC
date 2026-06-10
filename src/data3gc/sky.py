@@ -121,7 +121,8 @@ class Sky:
         # initialise image grid variables
         # base shape on xradio schema 
         # https://github.com/casangi/xradio/blob/470-changes-needed-for-astroviper/docs/source/image_data/tutorials/image_schema_proposal.ipynb
-        self.imshape = (len(freqs),len(stokes),npix, self.npix_y)  
+        self.imshape = (len(freqs),len(stokes),npix, self.npix_y)
+        print("imshape",self.imshape)
         # # initialise coords of data grids
         self.make_coord_grids()
         # initialise the data grids
@@ -137,10 +138,12 @@ class Sky:
                 verts = self.facetvertices[facet_index]
                 xmin,xmax = int(np.min(verts.x)),int(np.max(verts.x))
                 ymin,ymax = int(np.min(verts.y)),int(np.max(verts.y))
+                xlen = xmax-xmin
+                ylen = ymax-ymin
                 # initialise the facet as sky object
                 self.facets[facetname]=Sky(skyname=facetname,
                                         centrecoords=facet_phasecenter,
-                                        npix=xmax-xmin,
+                                        npix=xlen,
                                         npix_y=ymax-ymin,
                                         cellsize=cellsize,
                                         freqs=freqs,
@@ -157,6 +160,10 @@ class Sky:
                 self.facets[facetname].xmax = xmax
                 self.facets[facetname].ymin = ymin
                 self.facets[facetname].ymax = ymax
+                # debug
+                self.facets[facetname].xlen = xlen
+                self.facets[facetname].ylen = ylen
+                self.facets[facetname].verts = verts
         
                 
     ### update sky with facet information
@@ -234,6 +241,17 @@ class Sky:
         # update facet data from sky data using the underlying ndarray buffer
         for facet_key in update_facets:
             facet = self.facets[facet_key]
+            print()
+            print("facet imshape     :",facet.imshape)
+            print("facet data imshape:",facet.data["restored"].data.shape)
+            print("target datashape  :",facet.data["restored"].data[channel,stokes,:,:].shape)
+            print("input datashape   :",self.data["restored"].data[channel,
+                                                                       stokes,
+                                                                       facet.xmin:facet.xmax,
+                                                                       facet.ymin:facet.ymax+100].shape)
+            print("verts             :",facet.verts)
+            print("x",facet.xmin,facet.xmax,"dx",facet.xmax-facet.xmin,facet.xlen)
+            print("y",facet.ymin,facet.ymax,"dy",facet.ymax-facet.ymin,facet.ylen)
             for datakey in datakeys:
                 facet.data[datakey].data[channel,
                                           stokes,
@@ -763,15 +781,8 @@ class Sky:
             bin_edges_y = bin_edges_x
         else:
             bin_edges_y = np.linspace(0,self.npix_y,self.nfacets+1).astype(int)
-        # build sizes
-        bin_sizes_x   = bin_edges_x[1:] - bin_edges_x[:-1]
-        bin_sizes_y   = bin_edges_y[1:] - bin_edges_y[:-1]
-        
-        self.facetvertices = generate_vertices(bin_edges_x,bin_edges_y)
-        # # finish making widths list of len nfacets**2
-        # bin_sizes_x = np.tile(bin_sizes_x,self.nfacets)
-        # bin_sizes_y = np.tile(bin_sizes_y,self.nfacets)
-        
+        # build facet vertices. flippems correctly handles recangular skies
+        self.facetvertices = generate_vertices(bin_edges_y,bin_edges_x)
         # build centers
         bin_pixcoord_x = (bin_edges_x[:-1] + bin_edges_x[1:]) / 2
         bin_pixcoord_y = (bin_edges_y[:-1] + bin_edges_y[1:]) / 2

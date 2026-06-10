@@ -54,7 +54,7 @@ def test_read_from_fits():
 
 def test_full_functionality(show_ims=True):
     # initialise the sky object from test fits file
-    p = pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped.fits")
+    p = pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-3.fits")
     #p = pathlib.Path("/home/bonnassieux/Downloads/M31-lowres-LOFAR.fits")
     filename=p.absolute().as_posix()
     test_sky_m31_cropped = Sky.from_fits(filename,
