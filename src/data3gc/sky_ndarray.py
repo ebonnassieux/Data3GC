@@ -29,6 +29,18 @@ import xarray as xr
 ###  - group facets by Voronoi tesselation of Model data slice
 ###  - multisky (join Sky objects, show becomes healpix?)
 
+from time import time
+def timer(func):
+    # This function shows the execution time of 
+    # the function object passed
+    def wrap_func(*args, **kwargs):
+        t1 = time()
+        result = func(*args, **kwargs)
+        t2 = time()
+        print(f'Function {func.__name__:16s} executed in {(t2-t1):.4f}s')
+        return result
+    return wrap_func
+
 class Sky:
     '''
     A class represenging the Sky that we want to work with.
@@ -64,6 +76,7 @@ class Sky:
         return f"Sky({self.name}, ({self.phasecenter.to_string('hmsdms')}), {self.nfacets} facets"
 
     ### constructor
+    #@timer
     def __init__(self,
                  centrecoords : SkyCoord,
                  npix         : int,
@@ -72,6 +85,8 @@ class Sky:
                  nfacets      : int,
                  stokes       : str="I",
                  skyname      : str="Sky",
+                 data         : dict=None,
+                 npix_y       : int=None
                  ):
         '''
         Docstring for __init__
@@ -133,7 +148,6 @@ class Sky:
             self.facets={}
             for facet_index in range(len(self.facet_grid_regs)):
                 facet_phasecenter = self.facet_phasecenters[facet_index]
-#                print(facet_phasecenter)
                 facetname = facet_phasecenter.to_string('hmsdms')
                 verts = self.facetvertices[facet_index]
                 xmin,xmax = int(np.min(verts.x)),int(np.max(verts.x))
@@ -174,6 +188,7 @@ class Sky:
                 for key in self.data.keys():
                     self.facets[facetname].data[key] = self.data[key][sky_to_facet_regmask].reshape(self.facets[facetname].imshape)
     
+    #@timer
     def initdata(self) -> None:
         '''
         Creates and populates data dictionary.
@@ -188,11 +203,10 @@ class Sky:
                 "model",
                 "mask",
                 "beam"]
-        empty_data = np.zeros(self.imshape)
         for key in self.datakeys:
-            self.data[key] = empty_data
-        del(empty_data)
+            self.data[key] = np.zeros(self.imshape)
 
+    #@timer
     def radec2lm_scalar(self,
                         coords      : SkyCoord,
                         phasecenter : SkyCoord = None,
@@ -281,6 +295,7 @@ class Sky:
         plt.show()
     
     ### update sky with facet information
+    #@timer
     def update_sky(self,
                     datakey: list | str="all",
                     update_facets: list | str="all",
@@ -292,10 +307,22 @@ class Sky:
         Can be done per data key and per facet section of the sky.
         Does all datakeys and all sky by default
         '''
+        # if no facets present, skip compute
+        if self.nfacets == 0:
+            return
         if update_facets=="all":
             update_facets = self.facets.keys()
+        # if the update_facets are not in the facet keys, assume 
+        # a list of indices are provided, and update accordingly
+        elif update_facets[0] not in self.facets.keys() and type(update_facets[0])==int:
+            keylist = list(self.facets.keys())
+            update_facets = [keylist[i] for i in update_facets]
+        else:
+            raise ValueError("update_facets should be either 'all', a list of correct facet keys, or a corresponding list of indices.")
         if datakey=="all":
             datakeys=self.datakeys
+        else:
+            datakeys = [datakey] if isinstance(datakey, str) else list(datakey)
         for facet_key in update_facets:
             for datakey in datakeys:
                 self.data[datakey][channel,
@@ -303,6 +330,7 @@ class Sky:
                                    self.facets[facet_key].ymin:self.facets[facet_key].ymax,
                                    self.facets[facet_key].xmin:self.facets[facet_key].xmax] = self.facets[facet_key].data[datakey][channel,stokes,:,:]
 
+    #@timer
     def update_facets(self,
                     datakey: list | str="all",
                     update_facets: list | str="all",
@@ -333,6 +361,7 @@ class Sky:
  #                   self.facets[facetname].data[key] = self.data[key][sky_to_facet_regmask].reshape(self.facets[facetname].imshape)
 
     ### facet initialisation functionalities
+    #@timer
     def set_facet_pixgrid(self) -> None:
         '''
         Docstring for set_facet_pixgrid
@@ -354,6 +383,7 @@ class Sky:
         
 
 
+    #@timer
     def generate_facet_regions(self) -> list[tuple, tuple]:
         '''
         Function to generate region object for a given facet
@@ -434,6 +464,7 @@ class Sky:
         self.PA=PA
         test=1  
 
+    #@timer
     def region(self, 
                reg_visuals:dict) -> list[regions.RectangleSkyRegion, regions.PixelRegion]:
         '''
@@ -901,6 +932,7 @@ def generate_vertices(edges) -> tuple:
             vertices.append(regions.PixCoord(x=verty,y=vertx))
     return vertices
 
+#@timer
 def MaskFromVertices(data,vertices) -> np.ndarray:
     '''
     Make a mask from given array + vertices.

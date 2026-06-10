@@ -24,6 +24,18 @@ import json
 # for xarray functionalities
 import xarray as xr
 
+from time import time
+def timer(func):
+    # This function shows the execution time of 
+    # the function object passed
+    def wrap_func(*args, **kwargs):
+        t1 = time()
+        result = func(*args, **kwargs)
+        t2 = time()
+        print(f'Function {func.__name__:16s} executed in {(t2-t1):.4f}s')
+        return result
+    return wrap_func
+
 class Sky:
     '''
     A class represenging the Sky that we want to work with.
@@ -57,7 +69,8 @@ class Sky:
         print(self.phasecenter.to_string('hmsdms'))
         return f"Sky({self.name}, ({self.phasecenter.to_string('hmsdms')}), {self.nfacets} facets"
     
-      ### constructor
+    ### constructor
+    #@timer  
     def __init__(self,
                  centrecoords : SkyCoord,
                  npix         : int,
@@ -107,7 +120,7 @@ class Sky:
         # initialise image grid variables
         # base shape on xradio schema 
         # https://github.com/casangi/xradio/blob/470-changes-needed-for-astroviper/docs/source/image_data/tutorials/image_schema_proposal.ipynb
-        self.imshape = (len(self.freqs),len(self.stokes),self.npix, self.npix_y)    
+        self.imshape = (len(freqs),len(stokes),npix, self.npix_y)    
         self.wcs     = WCS(self.wcs_input_dict())
         self.gridwcs = self.wcs.dropaxis(2).dropaxis(2)
         # initialise coords of data grids
@@ -115,17 +128,17 @@ class Sky:
         # drop the Stokes, Freq axes for this
         self.ras, self.decs = self.gridwcs.all_pix2world(coordgrid[0],coordgrid[1],1)*u.deg
         # defin RA, Dec and l,m coords
-        self.skycoords = SkyCoord(self.ras,self.decs)
-        self.l,self.m  = self.radec2lm_scalar(self.skycoords,self.phasecenter)
+#        self.skycoords = 
+        self.l,self.m  = self.radec2lm_scalar(SkyCoord(self.ras,self.decs),self.phasecenter)
         # define region visuals for sky and facet
         self.sky_visuals   = {'color':"blue",
                             'linewidth':5}
         self.facet_visuals = {'color':"red",
                               'linewidth':1}
-        # initialise the data grids
-        self.initdata()
         # initialise regions
         self.sky_reg,self.grid_reg = self.region(self.sky_visuals)
+        # initialise the data grids
+        self.initdata()
         if self.nfacets!=0:
             # initialise facet properties
             self.set_facet_pixgrid()
@@ -145,8 +158,8 @@ class Sky:
                                         centrecoords=facet_phasecenter,
                                         npix=xlen,
                                         npix_y=ylen,
-                                        cellsize=self.cellsize,
-                                        freqs=self.freqs,
+                                        cellsize=cellsize,
+                                        freqs=freqs,
                                         nfacets=0,
                                         stokes=self.stokes
                 )
@@ -155,26 +168,29 @@ class Sky:
                 self.facets[facetname].sky_reg =  self.facet_sky_regs[facet_index]
                 self.facets[facetname].grid_reg =  self.facet_grid_regs[facet_index]
                 # define facet grid properties
-                self.facets[facetname].imshape = (len(freqs),len(stokes),xlen, ylen)
+#                self.facets[facetname].imshape = (len(freqs),len(stokes),xlen, ylen)
             
-                self.init_facet(facetname)
+
+#                self.facets[facetname].initdata()
                 # generate mask from vertices.
                 verts = self.facetvertices[facet_index]
                 xmin,xmax = int(np.min(verts.x)),int(np.max(verts.x))
                 ymin,ymax = int(np.min(verts.y)),int(np.max(verts.y))
-                sky_to_facet_regmask = np.zeros(self.imshape).astype(bool)
-                sky_to_facet_regmask[:,:,xmin:xmax,ymin:ymax]=True
-                self.facets[facetname].sky_to_facet_regmask = sky_to_facet_regmask
+#                sky_to_facet_regmask = np.zeros(self.imshape).astype(bool)
+#                sky_to_facet_regmask[:,:,xmin:xmax,ymin:ymax]=True
+#                self.facets[facetname].sky_to_facet_regmask = sky_to_facet_regmask
                 # add vertices info
                 self.facets[facetname].xmin = xmin
                 self.facets[facetname].xmax = xmax
                 self.facets[facetname].ymin = ymin
                 self.facets[facetname].ymax = ymax
-            # read data from sky
-            self.update_facets()
+                # initialise xarray facets
+                #self.init_facet(facetname)
+                
 
 
     ### update sky with facet information
+    
     def update_sky(self,
                     datakey: list | str="all",
                     update_facets: list | str="all",
@@ -209,18 +225,21 @@ class Sky:
 
         for facet_key in update_facets:
             facet = self.facets[facet_key]
+            xslice = slice(0,facet.npix)
+            yslice = slice(0,facet.npix_y)
             for datakey in datakeys:
                 self.data[datakey].isel(freq=channel,
                         stokes=stokes,
                         x=slice(facet.xmin,facet.xmax),
                         y=slice(facet.ymin,facet.ymax)
-                )[:] = facet.data[datakey].isel(freq=channel,stokes=stokes,x=slice(0,facet.npix),y=slice(0,facet.npix_y)).data
+                )[:] = facet.data[datakey].isel(freq=channel,stokes=stokes,x=xslice,y=yslice).data
 
 
             del(facet)
 
 
 
+    
     def update_facets(self,
                     datakey: list | str="all",
                     update_facets: list | str="all",
@@ -263,6 +282,7 @@ class Sky:
                                                                        facet.ymin:facet.ymax]
                 
 
+    
     def radec2lm_scalar(self,
                         coords      : SkyCoord,
                         phasecenter : SkyCoord = None,
@@ -288,6 +308,7 @@ class Sky:
         l = np.cos(decs) * np.sin(ras - refra)
         m = np.sin(decs) * np.cos(refdec) - np.cos(decs) * np.sin(refdec) * np.cos(ras - refra)
         return l,m
+
 
     def show(self,
              datakey: str="restored",
@@ -359,6 +380,7 @@ class Sky:
 
 
 
+    
     def initdata(self) -> None:
         '''
         Creates and populates data dictionary.
@@ -374,26 +396,34 @@ class Sky:
                         "mask",
                         "beam"]
         
-        for key in self.datakeys:
-            self.data[key] = xr.DataArray(
-                                        data=np.zeros(self.imshape), 
-                                        dims=["freq", 
-                                              "stokes", 
-                                              "x", 
-                                              "y"],
-                                        coords={
-                                            "freq": self.freqs.value,
-                                            "stokes": self.stokes,
-                                            "x":np.arange(self.npix),
-                                            "y":np.arange(self.npix_y),
-                                            "ra":(("x", "y"), self.ras.value),
-                                            "dec":(("x", "y"), self.decs.value),
-                                            "l":(("x", "y"), self.l),
-                                            "m":(("x", "y"), self.m)
-                                            },
-                                        name=key
-                                        )
+        dims=["freq", 
+            "stokes", 
+            "x", 
+            "y"]
+        coords={
+                "freq": self.freqs.value,
+                "stokes": self.stokes,
+                "x":np.arange(self.npix),
+                "y":np.arange(self.npix_y),
+                "ra":(("x", "y"), self.ras.value),
+                "dec":(("x", "y"), self.decs.value),
+                "l":(("x", "y"), self.l),
+                "m":(("x", "y"), self.m)
+                }
 
+        facet_xarr = xr.DataArray(data=np.zeros(self.imshape), 
+                                  dims=dims,
+                                  coords=coords,
+                                  name="temp"
+                                  )
+        for key in self.datakeys:
+            ### careful - this might need to become a copy
+            self.data[key] = facet_xarr#.copy()
+            self.data[key].name=key
+        del(facet_xarr)
+
+
+    
     def init_facet(self,facetname) -> None:
         '''
         Initialises all facet properties for requested facet.
@@ -412,26 +442,32 @@ class Sky:
                                         "model",
                                         "mask",
                                         "beam"]
+        xmin = self.facets[facetname].xmin
+        xmax = self.facets[facetname].xmax
+        ymin = self.facets[facetname].ymin
+        ymax = self.facets[facetname].ymax
         for key in self.datakeys:
-            self.facets[facetname].data[key] = xr.DataArray(
-                                        data=np.zeros(self.facets[facetname].imshape), 
-                                        dims=["freq", 
-                                              "stokes", 
-                                              "x", 
-                                              "y"],
-                                        coords={
-                                            "freq": self.freqs.value,
-                                            "stokes": self.stokes,
-                                            "x":np.arange(self.facets[facetname].npix),
-                                            "y":np.arange(self.facets[facetname].npix_y),
-                                            "ra":(("x", "y"), self.facets[facetname].ras.value),
-                                            "dec":(("x", "y"), self.facets[facetname].decs.value),
-                                            "l":(("x", "y"), self.facets[facetname].l),
-                                            "m":(("x", "y"), self.facets[facetname].m)
-                                            },
-                                        name=key
-                                        )
+            # self.facets[facetname].data[key] = xr.DataArray(
+            #                             data=np.zeros(self.facets[facetname].imshape), 
+            #                             dims=["freq", 
+            #                                   "stokes", 
+            #                                   "x", 
+            #                                   "y"],
+            #                             coords={
+            #                                 "freq": self.freqs.value,
+            #                                 "stokes": self.stokes,
+            #                                 "x":np.arange(self.facets[facetname].npix),
+            #                                 "y":np.arange(self.facets[facetname].npix_y),
+            #                                 "ra":(("x", "y"), self.facets[facetname].ras.value),
+            #                                 "dec":(("x", "y"), self.facets[facetname].decs.value),
+            #                                 "l":(("x", "y"), self.facets[facetname].l),
+            #                                 "m":(("x", "y"), self.facets[facetname].m)
+            #                                 },
+            #                             name=key
+            #                             )
+            self.facets[facetname].data[key] = self.data[key].isel(x=slice(xmin, xmax), y=slice(ymin, ymax))
 
+    
     
     def region(self, 
                reg_visuals:dict) -> list[regions.RectangleSkyRegion, regions.PixelRegion]:
@@ -787,6 +823,7 @@ class Sky:
         self.PA=PA
         test=1  
     
+    
     def set_facet_pixgrid(self) -> None:
         '''
         Docstring for set_facet_pixgrid
@@ -816,6 +853,7 @@ class Sky:
         self.bin_centers = regions.PixCoord(x=bin_centers_x.ravel(),y=bin_centers_y.ravel())
         self.facet_phasecenters = self.bin_centers.to_sky(self.gridwcs)
 
+    ##@timer
     def generate_facet_regions(self) -> list[tuple, tuple]:
         '''
         Function to generate region object for a given facet
@@ -838,31 +876,32 @@ class Sky:
             facet_grid_regs.append(grid_reg)
         return facet_sky_regs,facet_grid_regs
 
-    def radec2lm_scalar(self,
-                        coords      : SkyCoord,
-                        phasecenter : None | SkyCoord = None,
-                        ) -> list[float, float]:
-        # based on DDF function
-        '''
-        Docstring for radec2lm_scalar
+    # #@timer
+    # def radec2lm_scalar(self,
+    #                     coords      : SkyCoord,
+    #                     phasecenter : None | SkyCoord = None,
+    #                     ) -> list[float, float]:
+    #     # based on DDF function
+    #     '''
+    #     Docstring for radec2lm_scalar
         
-        Function based on DDFacet to generate l,m coordinates from RA, Dec SkyCoord
+    #     Function based on DDFacet to generate l,m coordinates from RA, Dec SkyCoord
 
-        :param self: based on Sky class
-        :param coords: input SkyCoord array object for the full grid 
-        :type coords: SkyCoord
-        :param phasecenter: Phase center from which to compute l,m values
-        :type phasecenter: None | SkyCoord
-        '''
-        if phasecenter==None:
-            phasecenter = self.phasecenter
-        refra = self.phasecenter.ra.rad
-        refdec = self.phasecenter.dec.rad
-        ras    = coords.ra.rad
-        decs   = coords.dec.rad
-        l = np.cos(decs) * np.sin(ras - refra)
-        m = np.sin(decs) * np.cos(refdec) - np.cos(decs) * np.sin(refdec) * np.cos(ras - refra)
-        return l,m
+    #     :param self: based on Sky class
+    #     :param coords: input SkyCoord array object for the full grid 
+    #     :type coords: SkyCoord
+    #     :param phasecenter: Phase center from which to compute l,m values
+    #     :type phasecenter: None | SkyCoord
+    #     '''
+    #     if phasecenter==None:
+    #         phasecenter = self.phasecenter
+    #     refra = self.phasecenter.ra.rad
+    #     refdec = self.phasecenter.dec.rad
+    #     ras    = coords.ra.rad
+    #     decs   = coords.dec.rad
+    #     l = np.cos(decs) * np.sin(ras - refra)
+    #     m = np.sin(decs) * np.cos(refdec) - np.cos(decs) * np.sin(refdec) * np.cos(ras - refra)
+    #     return l,m
 
     def wcs_input_dict(self,facet=False) -> dict:
         '''
@@ -1051,7 +1090,7 @@ class Sky:
         return this_sky
 
 
-    
+
 def generate_vertices(edges,
                       edges_y=None) -> tuple:
     '''
@@ -1078,6 +1117,7 @@ def generate_vertices(edges,
             vertices.append(regions.PixCoord(x=verty,y=vertx))
     return vertices
 
+#@timer
 def MaskFromVertices(data,vertices) -> np.ndarray:
     '''
     Make a mask from given array + vertices.

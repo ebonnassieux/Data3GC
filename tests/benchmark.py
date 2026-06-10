@@ -60,34 +60,48 @@ def bench_test(path=None,
         # finish bench
         t1 = datetime.datetime.now()
         dt = (t1-t0).total_seconds()
-        print("Bench : %12s"%(sky_type+" | "+benchname), " - nfacets: %3i"%nfacets," - total time :",dt)
+        print(f'Bench : {sky_type:8s} | {benchname:8s} - nfacets: {nfacets:3d} - total time: {dt}')
+              
+#              %12s"%(sky_type+" | "+benchname), " - nfacets: %3i"%nfacets," - total time :",dt)
         del(bench_sky)
 
 def bench_facets():
     # build list of fits file paths to iterate over
     fitslist=[pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped.fits"),
-              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-1.fits")]
+              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-1.fits"),
+              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-2.fits")]
     bench_name = ["400pix",
-            "800pix"]
+                  "800pix",
+                  "1600pix"]
+    
+#    fitslist = [pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped.fits")]
+#    bench_name = ["400pix"]
     # build list of facets to iterate over
     nfacetslist=[0,3,5,11,21,31]
 #    nfacetslist=[0]
     # launch bench
     for i, path in enumerate(fitslist):
+        print()
         print("--------- %24s ---------"%(path.as_posix()))
         for nfacets in nfacetslist:
             bench_test(path,
                     nfacets,
-                    nfacets_edit=nfacets,
+                    nfacets_edit=5,
                     benchname=bench_name[i],
                     sky_type="xarray")
-        print("--------- %24s ---------"%(path.as_posix()))
-        for nfacets in nfacetslist:
             bench_test(path,
                     nfacets,
-                    nfacets_edit=nfacets,
+                    nfacets_edit=5,
                     benchname=bench_name[i],
                     sky_type="ndarray")
+        # print()
+        # print("--------- %24s ---------"%(path.as_posix()))
+        # for nfacets in nfacetslist:
+        #     bench_test(path,
+        #             nfacets,
+        #             nfacets_edit=5,
+        #             benchname=bench_name[i],
+        #             sky_type="ndarray")
 
 
 if __name__=="__main__":
