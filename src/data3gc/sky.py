@@ -160,6 +160,9 @@ class Sky:
                 self.facets[facetname].xmax = xmax
                 self.facets[facetname].ymin = ymin
                 self.facets[facetname].ymax = ymax
+                print("phase centre: ",facet_phasecenter)
+                print("x_centre: ",round(0.5*(xmax-xmin)))
+                print("y_centre: ",round(0.5*(ymax-ymin)))
         
                 
     ### update sky with facet information
@@ -286,7 +289,7 @@ class Sky:
         # drop the Stokes, Freq axes for this
         x = coordgrid[0].ravel()
         y = coordgrid[1].ravel()
-        ra_flat, dec_flat = self.gridwcs.wcs_pix2world(x, y, 1) # TODO: should this be 1, or 0?
+        ra_flat, dec_flat = self.gridwcs.wcs_pix2world(x, y, 1) 
         self.ras = ra_flat.reshape(self.npix, self.npix_y) * u.deg
         self.decs = dec_flat.reshape(self.npix, self.npix_y) * u.deg
         self.l,self.m  = self.radec2lm_scalar(SkyCoord(self.ras,self.decs),self.phasecenter)
@@ -783,13 +786,14 @@ class Sky:
         # build facet vertices. flippems correctly handles recangular skies
         self.facetvertices = generate_vertices(bin_edges_y,bin_edges_x)
         # build centers
-        bin_pixcoord_x = (bin_edges_x[:-1] + bin_edges_x[1:]) / 2
-        bin_pixcoord_y = (bin_edges_y[:-1] + bin_edges_y[1:]) / 2
+        bin_pixcoord_x = np.round(0.5*(bin_edges_x[:-1] + bin_edges_x[1:]) )
+        bin_pixcoord_y = np.round(0.5*(bin_edges_y[:-1] + bin_edges_y[1:]) )
+
         ### indices are switched below: this is normal, and due to np.meshgrid behaviour
         bin_centers_y,bin_centers_x  = np.meshgrid(bin_pixcoord_x,bin_pixcoord_y)
         bin_centers = regions.PixCoord(x=bin_centers_x.ravel(),y=bin_centers_y.ravel())
-        self.facet_phasecenters = bin_centers.to_sky(self.gridwcs)
-        self.facet_phasecenters_pix = bin_centers
+        self.facet_phasecenters = bin_centers.to_sky(self.gridwcs,origin=1) # convert to FITS standard
+#        self.facet_phasecenters_pix = bin_centers
 
   
     def wcs_input_dict(self) -> dict:

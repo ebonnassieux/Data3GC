@@ -96,7 +96,7 @@ def test_full_functionality(show_ims=True):
     
     # test serialisation
     test_sky_m31_cropped.write(basename="tests/serialisation_tests/test",
-                            write_facets=None,
+                            write_facets="all",
                             datakey=["restored"],
                             verbose=True)
     print("Serialisation complete")
