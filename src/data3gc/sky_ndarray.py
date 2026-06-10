@@ -295,7 +295,7 @@ class Sky:
         plt.show()
     
     ### update sky with facet information
-    #@timer
+   #@timer
     def update_sky(self,
                     datakey: list | str="all",
                     update_facets: list | str="all",
@@ -330,7 +330,7 @@ class Sky:
                                    self.facets[facet_key].ymin:self.facets[facet_key].ymax,
                                    self.facets[facet_key].xmin:self.facets[facet_key].xmax] = self.facets[facet_key].data[datakey][channel,stokes,:,:]
 
-    #@timer
+   #@timer
     def update_facets(self,
                     datakey: list | str="all",
                     update_facets: list | str="all",

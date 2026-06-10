@@ -86,12 +86,12 @@ def bench_facets():
         for nfacets in nfacetslist:
             bench_test(path,
                     nfacets,
-                    nfacets_edit=5,
+                    nfacets_edit=nfacets,
                     benchname=bench_name[i],
                     sky_type="xarray")
             bench_test(path,
                     nfacets,
-                    nfacets_edit=5,
+                    nfacets_edit=nfacets,
                     benchname=bench_name[i],
                     sky_type="ndarray")
         # print()

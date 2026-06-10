@@ -130,7 +130,6 @@ class Sky:
         if self.nfacets!=0:
             # initialise facet properties
             self.set_facet_pixgrid()
-#            self.facet_sky_regs,self.facet_grid_regs = self.generate_facet_regions()
             for facet_index in range(len(self.facet_phasecenters)):
                 # read facet initialisation params
                 facet_phasecenter = self.facet_phasecenters[facet_index]
@@ -138,9 +137,6 @@ class Sky:
                 verts = self.facetvertices[facet_index]
                 xmin,xmax = int(np.min(verts.x)),int(np.max(verts.x))
                 ymin,ymax = int(np.min(verts.y)),int(np.max(verts.y))
-                # # get facet side sizes
-                # xlen = xmax-xmin
-                # ylen = ymax-ymin
                 # initialise the facet as sky object
                 self.facets[facetname]=Sky(skyname=facetname,
                                         centrecoords=facet_phasecenter,
@@ -151,8 +147,7 @@ class Sky:
                                         nfacets=0,
                                         stokes=self.stokes
                 )
-                ### TODO: set up so we do the below only once...
-                # reinitialise regions (update visuals, set gridreg to sky wcs)
+                # initialise region visuals
                 self.facets[facetname].sky_reg,self.facets[facetname].grid_reg = \
                     self.facets[facetname].region(self.facet_phasecenters[facet_index],
                                                   self.gridwcs,
@@ -197,22 +192,15 @@ class Sky:
             datakeys = list(self.datakeys)
         else:
             datakeys = [datakey] if isinstance(datakey, str) else list(datakey)
-        # update sky data from facet data using xarray indexing
-
-
+        # update sky data from facet data
         for facet_key in update_facets:
             facet = self.facets[facet_key]
-            xslice = slice(0,facet.npix)
-            yslice = slice(0,facet.npix_y)
             for datakey in datakeys:
-                self.data[datakey].isel(freq=channel,
-                        stokes=stokes,
-                        x=slice(facet.xmin,facet.xmax),
-                        y=slice(facet.ymin,facet.ymax)
-                )[:] = facet.data[datakey].isel(freq=channel,stokes=stokes,x=xslice,y=yslice).data
-
-
-            del(facet)
+                self.data[datakey][channel,
+                                   stokes,
+                                   self.facets[facet_key].xmin:self.facets[facet_key].xmax,
+                                   self.facets[facet_key].ymin:self.facets[facet_key].ymax] = self.facets[facet_key].data[datakey][channel,stokes,:,:].data
+        del(facet)
 
 
 
@@ -249,7 +237,6 @@ class Sky:
         for facet_key in update_facets:
             facet = self.facets[facet_key]
             for datakey in datakeys:
-                # flippums needed to correctly add the data. mindbreaking
                 facet.data[datakey].data[channel,
                                           stokes,
                                           :,
@@ -257,6 +244,7 @@ class Sky:
                                                                        stokes,
                                                                        facet.xmin:facet.xmax,
                                                                        facet.ymin:facet.ymax]
+        del(facet)
                 
 
    #@timer
