@@ -289,19 +289,6 @@ class Sky:
         ra_flat, dec_flat = self.gridwcs.wcs_pix2world(x, y, 1) # TODO: should this be 1, or 0?
         self.ras = ra_flat.reshape(self.npix, self.npix_y) * u.deg
         self.decs = dec_flat.reshape(self.npix, self.npix_y) * u.deg
-
-        ref_pixels = [round(0.5*self.npix)+1,
-                  round(0.5*self.npix_y)+1,
-                  1.,
-                  1.]
-            
-        ref_crvals = [self.phasecenter.ra.to(u.deg).value,
-                  self.phasecenter.dec.to(u.deg).value,
-                  self.freqs[0].value,
-                  1.]
-        cdelt_deg = self.cellsize.to(u.deg).value
-
-
         self.l,self.m  = self.radec2lm_scalar(SkyCoord(self.ras,self.decs),self.phasecenter)
         # initialise sky regions
         self.sky_reg,self.grid_reg = self.region(self.phasecenter,self.gridwcs,sky_visuals())
