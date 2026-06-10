@@ -160,8 +160,6 @@ class Sky:
                 self.facets[facetname].xmax = xmax
                 self.facets[facetname].ymin = ymin
                 self.facets[facetname].ymax = ymax
-                print("x middle : ",0.5*(xmax-xmin)+xmin)
-                print("y middle : ",0.5*(ymax-ymin)+ymin)
         
                 
     ### update sky with facet information
@@ -273,10 +271,10 @@ class Sky:
         refdec = self.phasecenter.dec.rad
         ras    = coords.ra.rad
         decs   = coords.dec.rad
-
+        # calculate l,m
         l = np.cos(decs) * np.sin(ras - refra)
         m = np.sin(decs) * np.cos(refdec) - np.cos(decs) * np.sin(refdec) * np.cos(ras - refra)
-
+        # return values
         return l,m
     
     @timer
@@ -286,8 +284,6 @@ class Sky:
         # initialise coords of data grids
         coordgrid = np.indices((self.npix,self.npix_y))
         # drop the Stokes, Freq axes for this
-
-        #self.ras, self.decs = self.gridwcs.all_pix2world(coordgrid[0],coordgrid[1],1)*u.deg
         x = coordgrid[0].ravel()
         y = coordgrid[1].ravel()
         ra_flat, dec_flat = self.gridwcs.wcs_pix2world(x, y, 1)   # origin=1 like your code
@@ -376,6 +372,7 @@ class Sky:
         :param self: Sky object
  
         '''
+        # TODO: this should be a single DataSet!!!
         self.data={}
         self.datakeys = ["dirty",
                         "restored",
@@ -420,12 +417,10 @@ class Sky:
         :param reg_visuals: Description
         :type reg_visuals: dict
         '''
-        
-
         pix_x, pix_y = sky_gridwcs.wcs_world2pix(
                                 center_coords.ra.deg,
                                 center_coords.dec.deg,
-                                0,          # origin=1 due to FITS-style counting
+                                0,          # origin=0 because we want it given in python-style counting
                             )
 
         pix_center = regions.PixCoord(x=pix_x, y=pix_y)
@@ -435,14 +430,6 @@ class Sky:
                                                 visual=reg_visuals)
         print("DEBUG - grid_reg",grid_reg)
         sky_reg = grid_reg.to_sky(sky_gridwcs)
-
-
-        # sky_reg  = regions.RectangleSkyRegion(center=center_coords, 
-        #                                       width=self.cellsize*(self.npix_y), 
-        #                                       height=self.cellsize*(self.npix),
-        #                                       visual=reg_visuals
-        #                                       )
-        # grid_reg = sky_reg.to_pixel(sky_gridwcs)
         return sky_reg,grid_reg
     
     def JonesRegions(self,njonesdir) -> None:
