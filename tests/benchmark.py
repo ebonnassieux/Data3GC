@@ -58,7 +58,7 @@ def bench_test(path=None,
                                                         scale=0.001,
                                                         size=this_facet_data.shape)
                     bench_sky.facets[key].data["restored"] = this_facet_data + noisevals
-            bench_sky.update_sky()
+            bench_sky.update_sky(update_facets=keylist)
         # finish bench
         t1 = datetime.datetime.now()
         dt = (t1-t0).total_seconds()
@@ -163,7 +163,8 @@ def bench_test_detailed(path=None,
                                                         scale=0.001,
                                                         size=this_facet_data.shape)
                     bench_sky.facets[key].data["restored"] = this_facet_data + noisevals
-            bench_sky.update_sky()
+            ### TODO: update sky only for edited facets
+            bench_sky.update_sky()#update_facets=editkeylist)
         t6 = time() # facet update time
         facet_update_time = t6-t5
         # finish bench
@@ -198,7 +199,7 @@ def bench_facets():
         for nfacets in nfacetslist:
             bench_test_detailed(path,
                     nfacets,
-                    nfacets_edit=nfacets**2,
+                    nfacets_edit=1,
                     benchname=bench_name[i],
                     sky_type="xarray")
             # bench_test(path,
