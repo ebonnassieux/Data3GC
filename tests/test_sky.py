@@ -6,7 +6,9 @@ from astropy.io import fits
 import matplotlib.pyplot as plt
 import pytest
 import pathlib
+# for benching
 
+from time import time
 
 from data3gc.sky import Sky
 
@@ -76,9 +78,6 @@ def test_read_from_fits():
     test_sky_m31_cropped = Sky.from_fits(filename,
                                         nfacets=11,
                                         skyname="M31_cropped")
-    # initialise WCS grids
-    test_sky_m31_cropped.initWCSgrids()
-    test_sky_m31_cropped.initdata()
     print("Initialisation done, preparing show.")
     test_sky_m31_cropped.show(vmin=-0.0005,vmax=0.0015)
     test_sky_m31_cropped.close()
