@@ -37,6 +37,36 @@ def test_sky_initialisation_facets():
 
 
 
+
+def test_sky__dataclassinitialisation_facets():
+    from data3gc.sky import Sky_dataclass as Sky
+    test_sky_5facets = Sky.zeros(centrecoords=SkyCoord(45.*u.deg,45*u.deg,frame="fk5"),
+                                npix=256,
+                                npix_y=256,
+                                cellsize=1*u.arcmin,
+                                freqs=[60]*u.MHz,
+                                nfacets=3,
+                                stokes="I",
+                                skyname="test_nenusky"
+    )
+    print(test_sky_5facets.imshape)
+    print(test_sky_5facets.data)
+
+def test_sky__dataclassinitialisation_facets_fromfits():
+    from data3gc.sky import Sky_dataclass as Sky
+    test_sky_5facets = Sky.zeros(centrecoords=SkyCoord(45.*u.deg,45*u.deg,frame="fk5"),
+                                npix=256,
+                                npix_y=256,
+                                cellsize=1*u.arcmin,
+                                freqs=[60]*u.MHz,
+                                nfacets=3,
+                                stokes="I",
+                                skyname="test_nenusky"
+    )
+    print(test_sky_5facets)
+    print(test_sky_5facets.imshape)
+    print(test_sky_5facets.data)
+
 def test_read_from_fits():
     # initialise the sky object from test fits file
     p = pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped.fits")
@@ -46,6 +76,9 @@ def test_read_from_fits():
     test_sky_m31_cropped = Sky.from_fits(filename,
                                         nfacets=11,
                                         skyname="M31_cropped")
+    # initialise WCS grids
+    test_sky_m31_cropped.initWCSgrids()
+    test_sky_m31_cropped.initdata()
     print("Initialisation done, preparing show.")
     test_sky_m31_cropped.show(vmin=-0.0005,vmax=0.0015)
     test_sky_m31_cropped.close()
@@ -54,14 +87,12 @@ def test_read_from_fits():
 
 def test_full_functionality(show_ims=True):
     # initialise the sky object from test fits file
-    p = pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-1.fits")
+    p = pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-2.fits")
     #p = pathlib.Path("/home/bonnassieux/Downloads/M31-lowres-LOFAR.fits")
     filename=p.absolute().as_posix()
     test_sky_m31_cropped = Sky.from_fits(filename,
                                         nfacets=3,
                                         skyname="M31_cropped")
-#    print("Sky initialised from fits")
-
     test_sky_m31_cropped.update_facets("restored")
 
 
@@ -113,4 +144,4 @@ if __name__=="__main__":
 #    test_read_from_fits()
     # test fits file open, facet initialisation + manipulation, then save
     test_full_functionality()
-    
+#    test_sky__dataclassinitialisation_facets()

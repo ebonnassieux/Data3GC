@@ -93,11 +93,11 @@ def bench_facets():
                     nfacets_edit=nfacets,
                     benchname=bench_name[i],
                     sky_type="xarray")
-        #     bench_test(path,
-        #             nfacets,
-        #             nfacets_edit=nfacets,
-        #             benchname=bench_name[i],
-        #             sky_type="ndarray")
+            # bench_test(path,
+            #         nfacets,
+            #         nfacets_edit=nfacets,
+            #         benchname=bench_name[i],
+            #         sky_type="ndarray")
         # # print()
         # print("--------- %24s ---------"%(path.as_posix()))
         # for nfacets in nfacetslist:
