@@ -191,10 +191,10 @@ def bench_facets():
     # build list of fits file paths to iterate over
     fitslist=[pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped.fits"),
               pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-1.fits"),
-              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-2.fits"),
-              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-3.fits"),
-              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-4.fits"),
-              pathlib.Path("/home/bonnassieux/Downloads/M31-lowres-LOFAR.fits")]
+              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-2.fits")]#,
+            #   pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-3.fits"),
+            #   pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-4.fits"),
+            #   pathlib.Path("/home/bonnassieux/Downloads/M31-lowres-LOFAR.fits")]
     bench_name = ["656K",
                   "2,5M",
                   "9,9M",
@@ -202,7 +202,7 @@ def bench_facets():
                   "88M",
                   "141M - full LoTSS field"]
     # build list of facets to iterate over
-    nfacetslist=[1,2,3,4,5,7,9,11,15,21,31]
+    nfacetslist=[1,2,3,4,5,7,9,11]#,15,21,31]
     # initialise bench arrays
     ntests=None
     test_labels=[
@@ -241,7 +241,7 @@ def bench_facets():
         ndarray_all_benches.append(ndarray_bench_times)
     
     xarray_all_benches = np.array(xarray_all_benches)
-    ndarray_test_labels = np.array(ndarray_test_labels)
+    ndarray_all_benches = np.array(ndarray_all_benches)
 
     nfacets = np.array(nfacetslist)**2
 
@@ -252,10 +252,11 @@ def bench_facets():
         plt.xlabel("Nfacets")
         plt.ylabel("Runtime [s]")
         for bench_ind in range(len(fitslist)):
-            plt.plot(nfacets,all_benches[bench_ind,:,i],label=bench_name[bench_ind])
+            plt.plot(nfacets,xarray_all_benches[bench_ind,:,i],label="xarray "+bench_name[bench_ind])
+            plt.plot(nfacets,ndarray_all_benches[bench_ind,:,i],label="ndarray "+bench_name[bench_ind])
         plt.legend()
-        ymin = 0.9*np.min(all_benches[:,:,i])
-        ymax = 1.2*np.max(all_benches[:,:,i])
+        ymin = 0.9*np.min(ndarray_all_benches[:,:,i])
+        ymax = 1.2*np.max(xarray_all_benches[:,:,i])
         plt.ylim((ymin,ymax))
         plt.grid()
         plt.savefig(test_labels[i])
