@@ -191,10 +191,10 @@ def bench_facets():
     # build list of fits file paths to iterate over
     fitslist=[pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped.fits"),
               pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-1.fits"),
-              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-2.fits")]#,
-            #   pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-3.fits"),
-            #   pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-4.fits"),
-            #   pathlib.Path("/home/bonnassieux/Downloads/M31-lowres-LOFAR.fits")]
+              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-2.fits"),
+              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-3.fits"),
+              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-4.fits"),
+              pathlib.Path("/home/bonnassieux/Downloads/M31-lowres-LOFAR.fits")]
     bench_name = ["656K",
                   "2,5M",
                   "9,9M",
