@@ -176,7 +176,7 @@ def bench_test_detailed(path=None,
         bench_times = [fits_input_time, initialisation_time, sky_wcs_init_time, sky_data_init_time, facet_init_time, facet_update_time, total_runtime]
         return bench_times
 
-def bench_facets():
+def bench_facets(): 
     # build list of fits file paths to iterate over
     fitslist=[pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped.fits"),
               pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-1.fits"),

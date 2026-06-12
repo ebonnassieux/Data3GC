@@ -433,7 +433,7 @@ class Sky:
                  nfacets      : int,
                  stokes       : str="I",
                  skyname      : str="Sky",
-                 data         : dict=None,
+                 datatype     : np.ndarray|xr.DataArray=xr.DataArray,
                  npix_y       : int=None
                  ):
         '''
@@ -472,6 +472,8 @@ class Sky:
         # split stokes string into list
         self.stokes      = list(set(stokes))
         self.nfacets     = nfacets
+        # initialise datatype
+        self.datatype = datatype
         # initialise image grid variables
         # base shape on xradio schema 
         # https://github.com/casangi/xradio/blob/470-changes-needed-for-astroviper/docs/source/image_data/tutorials/image_schema_proposal.ipynb
@@ -681,19 +683,14 @@ class Sky:
                 self.facets[facetname].decs = self.decs[xmin:xmax,ymin:ymax]
                 self.facets[facetname].l = self.l[xmin:xmax,ymin:ymax]
                 self.facets[facetname].m = self.m[xmin:xmax,ymin:ymax]
-                
-
-#                self.facets[facetname].initWCSgrids()
-               # init facet data
-                self.facets[facetname].initdata()
+                # init facet data
+                if self.datatype is xr.DataArray:
+                    self.facets[facetname].initdata_xarray()
                 # initialise region visuals
                 self.facets[facetname].sky_reg,self.facets[facetname].grid_reg = \
                     self.facets[facetname].region(self.facet_phasecenters[facet_index],
                                                   self.gridwcs,
                                                   facet_visuals())
-                # print("phase centre: ",facet_phasecenter)
-                # print("x_centre: ",round(0.5*(xmax-xmin)))
-                # print("y_centre: ",round(0.5*(ymax-ymin)))
         
 
 
@@ -768,7 +765,7 @@ class Sky:
 
 
    #@timer
-    def initdata(self) -> None:
+    def initdata_xarray(self) -> None:
         '''
         Creates and populates data dictionary.
         
@@ -1356,7 +1353,8 @@ class Sky:
         # initialise WCS grids
         this_sky.initWCSgrids()
         # initialise data
-        this_sky.initdata()
+        if this_sky.datatype is xr.DataArray:
+            this_sky.initdata_xarray()
         this_sky.initfacets()
         # do it for all facets too
         ...
