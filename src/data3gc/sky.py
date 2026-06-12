@@ -598,13 +598,22 @@ class Sky:
         for facet_key in update_facets:
             facet = self.facets[facet_key]
             for datakey in datakeys:
-                facet.data[datakey].data[channel,
-                                          stokes,
-                                          :,
-                                          :] = self.data[datakey].data[channel,
+                if self.datatype is xr.DataArray:
+                    facet.data[datakey].data[channel,
+                                            stokes,
+                                            :,
+                                            :] = self.data[datakey].data[channel,
                                                                        stokes,
                                                                        facet.xmin:facet.xmax,
                                                                        facet.ymin:facet.ymax]
+                elif self.datatype is np.ndarray:
+                    facet.data[datakey][channel,
+                                        stokes,
+                                        :,
+                                        :] = self.data[datakey][channel,
+                                                                stokes,
+                                                                facet.xmin:facet.xmax,
+                                                                facet.ymin:facet.ymax]
                 
 
    #@timer
@@ -686,6 +695,10 @@ class Sky:
                 # init facet data
                 if self.datatype is xr.DataArray:
                     self.facets[facetname].initdata_xarray()
+                elif self.datatype is np.ndarray:
+                    self.facets[facetname].initdata_ndarray()
+                else:
+                    return ValueError
                 # initialise region visuals
                 self.facets[facetname].sky_reg,self.facets[facetname].grid_reg = \
                     self.facets[facetname].region(self.facet_phasecenters[facet_index],
@@ -803,6 +816,23 @@ class Sky:
             ### careful - this might need to become a copy
             self.data[key] = facet_xarr#.copy()
             self.data[key].name=key
+
+    def initdata_ndarray(self) -> None:
+        '''
+        Creates and populates ndarray data dictionary.
+        
+        :param self: Sky object
+ 
+        '''
+        self.data={}
+        self.datakeys = ["dirty",
+                "restored",
+                "residual",
+                "model",
+                "mask",
+                "beam"]
+        for key in self.datakeys:
+            self.data[key] = np.zeros(self.imshape)
 
    #@timer
     def region(self,
@@ -1296,6 +1326,7 @@ class Sky:
                   nfacets:int=5,
                   skyname:str=None,
                   stokes:str="I",
+                  datatype:np.ndarray|xr.DataArray=xr.DataArray,
                   default_data_type:str="restored"):
         '''
         Class method to initialise Sky object from a .fits file.
@@ -1349,12 +1380,15 @@ class Sky:
                        cellsize=fits_cellsize,
                        freqs=fits_freqs,
                        nfacets=nfacets,
-                       stokes=stokes)
+                       stokes=stokes,
+                       datatype=datatype)
         # initialise WCS grids
         this_sky.initWCSgrids()
         # initialise data
         if this_sky.datatype is xr.DataArray:
             this_sky.initdata_xarray()
+        elif this_sky.datatype is np.ndarray:
+            this_sky.initdata_ndarray()
         this_sky.initfacets()
         # do it for all facets too
         ...
@@ -1373,7 +1407,10 @@ class Sky:
         if baseimagename==None:
 #            print("Image string does not include data keyword; assume it is a %s image. All other data arrays will be empty."%default_data_type)
             hdul = fits.open(filename)
-            this_sky.data["restored"].data=hdul[hdu_n].data
+            if this_sky.datatype is xr.DataArray:
+                this_sky.data["restored"].data=hdul[hdu_n].data
+            else:
+                this_sky.data["restored"]=hdul[hdu_n].data
             hdul.close()
 
 
