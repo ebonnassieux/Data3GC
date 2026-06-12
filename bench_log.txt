@@ -1,0 +1,40 @@
+
+--------- tests/Data/M31-lowres-LOFAR-cropped.fits ---------
+Bench : xarray   | 656K     - nfacets:   0 - readfits: 0.0104 - skyinit: 0.0021 - skyWCSinit: 0.0302 - SkyDataInit: 0.0019 - FacetsInit: 0.0000 - FacetsUpdate: 0.0000 - total: 0.04
+Bench : xarray   | 656K     - nfacets:   3 - readfits: 0.0462 - skyinit: 0.0022 - skyWCSinit: 0.0241 - SkyDataInit: 0.0013 - FacetsInit: 0.0476 - FacetsUpdate: 0.0023 - total: 0.12
+Bench : xarray   | 656K     - nfacets:   5 - readfits: 0.0095 - skyinit: 0.0020 - skyWCSinit: 0.0255 - SkyDataInit: 0.0015 - FacetsInit: 0.1280 - FacetsUpdate: 0.0018 - total: 0.17
+Bench : xarray   | 656K     - nfacets:  11 - readfits: 0.0089 - skyinit: 0.0019 - skyWCSinit: 0.0224 - SkyDataInit: 0.0012 - FacetsInit: 0.6639 - FacetsUpdate: 0.0017 - total: 0.70
+Bench : xarray   | 656K     - nfacets:  21 - readfits: 0.0098 - skyinit: 0.0020 - skyWCSinit: 0.0240 - SkyDataInit: 0.0013 - FacetsInit: 2.3207 - FacetsUpdate: 0.0017 - total: 2.36
+Bench : xarray   | 656K     - nfacets:  31 - readfits: 0.0104 - skyinit: 0.0020 - skyWCSinit: 0.0231 - SkyDataInit: 0.0012 - FacetsInit: 4.9034 - FacetsUpdate: 0.0016 - total: 4.94
+
+--------- tests/Data/M31-lowres-LOFAR-cropped-1.fits ---------
+Bench : xarray   | 2,5M     - nfacets:   0 - readfits: 0.0103 - skyinit: 0.0020 - skyWCSinit: 0.0954 - SkyDataInit: 0.0032 - FacetsInit: 0.0000 - FacetsUpdate: 0.0000 - total: 0.11
+Bench : xarray   | 2,5M     - nfacets:   3 - readfits: 0.0100 - skyinit: 0.0019 - skyWCSinit: 0.0899 - SkyDataInit: 0.0034 - FacetsInit: 0.0549 - FacetsUpdate: 0.0031 - total: 0.16
+Bench : xarray   | 2,5M     - nfacets:   5 - readfits: 0.0106 - skyinit: 0.0020 - skyWCSinit: 0.0934 - SkyDataInit: 0.0032 - FacetsInit: 0.1402 - FacetsUpdate: 0.0022 - total: 0.25
+Bench : xarray   | 2,5M     - nfacets:  11 - readfits: 0.0104 - skyinit: 0.0020 - skyWCSinit: 0.0918 - SkyDataInit: 0.0033 - FacetsInit: 0.6996 - FacetsUpdate: 0.0018 - total: 0.81
+Bench : xarray   | 2,5M     - nfacets:  21 - readfits: 0.0104 - skyinit: 0.0021 - skyWCSinit: 0.0901 - SkyDataInit: 0.0033 - FacetsInit: 2.3158 - FacetsUpdate: 0.0017 - total: 2.42
+Bench : xarray   | 2,5M     - nfacets:  31 - readfits: 0.0103 - skyinit: 0.0020 - skyWCSinit: 0.0909 - SkyDataInit: 0.0030 - FacetsInit: 5.1034 - FacetsUpdate: 0.0017 - total: 5.21
+
+--------- tests/Data/M31-lowres-LOFAR-cropped-2.fits ---------
+Bench : xarray   | 9,9M     - nfacets:   0 - readfits: 0.0110 - skyinit: 0.0020 - skyWCSinit: 0.3814 - SkyDataInit: 0.0079 - FacetsInit: 0.0000 - FacetsUpdate: 0.0000 - total: 0.40
+Bench : xarray   | 9,9M     - nfacets:   3 - readfits: 0.0108 - skyinit: 0.0021 - skyWCSinit: 0.3716 - SkyDataInit: 0.0080 - FacetsInit: 0.0744 - FacetsUpdate: 0.0085 - total: 0.48
+Bench : xarray   | 9,9M     - nfacets:   5 - readfits: 0.0106 - skyinit: 0.0021 - skyWCSinit: 0.3772 - SkyDataInit: 0.0080 - FacetsInit: 0.1586 - FacetsUpdate: 0.0043 - total: 0.56
+Bench : xarray   | 9,9M     - nfacets:  11 - readfits: 0.0103 - skyinit: 0.0020 - skyWCSinit: 0.3685 - SkyDataInit: 0.0082 - FacetsInit: 0.6657 - FacetsUpdate: 0.0021 - total: 1.06
+Bench : xarray   | 9,9M     - nfacets:  21 - readfits: 0.0106 - skyinit: 0.0019 - skyWCSinit: 0.4020 - SkyDataInit: 0.0089 - FacetsInit: 2.2958 - FacetsUpdate: 0.0017 - total: 2.72
+Bench : xarray   | 9,9M     - nfacets:  31 - readfits: 0.0108 - skyinit: 0.0020 - skyWCSinit: 0.3629 - SkyDataInit: 0.0079 - FacetsInit: 4.9303 - FacetsUpdate: 0.0017 - total: 5.32
+
+--------- tests/Data/M31-lowres-LOFAR-cropped-3.fits ---------
+Bench : xarray   | 40M      - nfacets:   0 - readfits: 0.0108 - skyinit: 0.0020 - skyWCSinit: 3.8599 - SkyDataInit: 0.0608 - FacetsInit: 0.0000 - FacetsUpdate: 0.0000 - total: 3.93
+Bench : xarray   | 40M      - nfacets:   3 - readfits: 0.0146 - skyinit: 0.0020 - skyWCSinit: 2.6717 - SkyDataInit: 0.0631 - FacetsInit: 0.1344 - FacetsUpdate: 0.0301 - total: 2.92
+Bench : xarray   | 40M      - nfacets:   5 - readfits: 0.0104 - skyinit: 0.0020 - skyWCSinit: 2.1093 - SkyDataInit: 0.0635 - FacetsInit: 0.2693 - FacetsUpdate: 0.0137 - total: 2.47
+Bench : xarray   | 40M      - nfacets:  11 - readfits: 0.0107 - skyinit: 0.0021 - skyWCSinit: 2.0373 - SkyDataInit: 0.0612 - FacetsInit: 0.7411 - FacetsUpdate: 0.0047 - total: 2.86
+Bench : xarray   | 40M      - nfacets:  21 - readfits: 0.0104 - skyinit: 0.0019 - skyWCSinit: 1.8293 - SkyDataInit: 0.0603 - FacetsInit: 2.4735 - FacetsUpdate: 0.0037 - total: 4.38
+Bench : xarray   | 40M      - nfacets:  31 - readfits: 0.0128 - skyinit: 0.0022 - skyWCSinit: 2.4609 - SkyDataInit: 0.0641 - FacetsInit: 5.5985 - FacetsUpdate: 0.0025 - total: 8.14
+
+--------- tests/Data/M31-lowres-LOFAR-cropped-4.fits ---------
+Bench : xarray   | 88M      - nfacets:   0 - readfits: 0.0122 - skyinit: 0.0021 - skyWCSinit: 6.8408 - SkyDataInit: 0.1311 - FacetsInit: 0.0000 - FacetsUpdate: 0.0000 - total: 6.99
+Bench : xarray   | 88M      - nfacets:   3 - readfits: 0.0111 - skyinit: 0.0022 - skyWCSinit: 8.2179 - SkyDataInit: 0.1346 - FacetsInit: 0.6649 - FacetsUpdate: 0.0866 - total: 9.12
+Bench : xarray   | 88M      - nfacets:   5 - readfits: 0.0264 - skyinit: 0.0063 - skyWCSinit: 6.1817 - SkyDataInit: 0.1349 - FacetsInit: 0.4974 - FacetsUpdate: 0.0270 - total: 6.87
+Bench : xarray   | 88M      - nfacets:  11 - readfits: 0.0108 - skyinit: 0.0019 - skyWCSinit: 5.9629 - SkyDataInit: 0.1307 - FacetsInit: 1.5957 - FacetsUpdate: 0.0086 - total: 7.71
+Bench : xarray   | 88M      - nfacets:  21 - readfits: 0.0106 - skyinit: 0.0020 - skyWCSinit: 4.0892 - SkyDataInit: 0.1306 - FacetsInit: 2.8256 - FacetsUpdate: 0.0039 - total: 7.06
+Bench : xarray   | 88M      - nfacets:  31 - readfits: 0.0116 - skyinit: 0.0020 - skyWCSinit: 3.9970 - SkyDataInit: 0.1288 - FacetsInit: 5.5740 - FacetsUpdate: 0.0035 - total: 9.72

@@ -79,9 +79,9 @@ class SkyGrid:
             coordgrid = np.indices((npix_x, npix_y or npix_x))
             x = coordgrid[0].ravel()
             y = coordgrid[1].ravel()
-            ra_flat, dec_flat = self.gridwcs.wcs_pix2world(x, y, 1)
-            ras = ra_flat.reshape(self.npix_x, self.npix_y) * u.deg
-            decs = dec_flat.reshape(self.npix_x, self.npix_y) * u.deg
+            ra_flat, dec_flat = wcs.wcs_pix2world(x, y, 1)
+            ras = ra_flat.reshape(npix_x, npix_y) * u.deg
+            decs = dec_flat.reshape(npix_x, npix_y) * u.deg
             return cls(ras,
                        decs,
                        cellsize,
@@ -258,8 +258,8 @@ class Sky_dataclass:
         del(fits_data)
         hdul.close()
         this_sky = cls(centrecoords=fits_centrecoords,
-                       npix_x=npix_x,
-                       npix_y=npix_y,
+                       npix_x=fits_npix_x,
+                       npix_y=fits_npix_y,
                        cellsize=fits_cellsize,
                        freqs=fits_freqs,
                        stokes=stokes,
@@ -655,9 +655,6 @@ class Sky:
             # initialise facet properties
             self.set_facet_pixgrid()
             for facet_index in range(len(self.facet_phasecenters)):
-                # debug
-#                print()
-#                print("Initialisation of facet",facet_index)
                 # read facet initialisation params
                 facet_phasecenter = self.facet_phasecenters[facet_index]
                 facetname = facet_phasecenter.to_string('hmsdms')
@@ -1358,8 +1355,6 @@ class Sky:
                        stokes=stokes)
         # initialise WCS grids
         this_sky.initWCSgrids()
-        # do it for all facets too
-        ...
         # initialise data
         this_sky.initdata()
         this_sky.initfacets()
