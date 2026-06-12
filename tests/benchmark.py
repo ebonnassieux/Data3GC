@@ -14,6 +14,7 @@ import random
 from time import time
 from astropy.wcs import WCS
 from astropy.io import fits
+import xarray as xr
 
 # to ignore annoying fits warnings
 import warnings
@@ -41,9 +42,10 @@ def bench_test(path=None,
                                         nfacets=nfacets,
                                         skyname=benchname)
         elif sky_type=="ndarray":
-            bench_sky = Sky_ndarray.from_fits(filename,
+            bench_sky = Sky_xarray.from_fits(filename,
                                         nfacets=nfacets,
-                                        skyname=benchname)
+                                        skyname=benchname,
+                                        datatype=np.ndarray)
         else:
             return ValueError
             
@@ -54,10 +56,10 @@ def bench_test(path=None,
                 if i in edit_facets:
                     this_facet_data = bench_sky.facets[key].data["restored"]
                     # add noise to this facet to show we can edit specific areas
-                    noisevals = float(i+1)*np.random.normal(loc=0,
-                                                        scale=0.001,
-                                                        size=this_facet_data.shape)
-                    bench_sky.facets[key].data["restored"] = this_facet_data + noisevals
+                    # noisevals = float(i+1)*np.random.normal(loc=0,
+                    #                                     scale=0.001,
+                    #                                     size=this_facet_data.shape)
+                    bench_sky.facets[key].data["restored"] = this_facet_data + float(i+1)#noisevals
             bench_sky.update_sky(update_facets=keylist)
         # finish bench
         t1 = time()
@@ -131,9 +133,15 @@ def bench_test_detailed(path=None,
                        nfacets=nfacets,
                        stokes="I")
         elif sky_type=="ndarray":
-            bench_sky = Sky_ndarray.from_fits(filename,
-                                        nfacets=nfacets,
-                                        skyname=benchname)
+            bench_sky = Sky_xarray(skyname=skyname,
+                       centrecoords=fits_centrecoords,
+                       npix=fits_npix_x,
+                       npix_y=fits_npix_y,
+                       cellsize=fits_cellsize,
+                       freqs=fits_freqs,
+                       nfacets=nfacets,
+                       stokes="I",
+                       datatype=np.ndarray)
         else:
             return ValueError
         t2=time() # sky initialisation time
@@ -143,7 +151,10 @@ def bench_test_detailed(path=None,
         t3=time() # wcs initialisation time
         sky_wcs_init_time = t3-t2
         # initialise data
-        bench_sky.initdata()
+        if bench_sky.datatype is xr.DataArray:
+            bench_sky.initdata_xarray()
+        elif bench_sky.datatype is np.ndarray:
+            bench_sky.initdata_ndarray()
         t4=time()
         sky_data_init_time = t4-t3
         bench_sky.initfacets()
@@ -169,7 +180,7 @@ def bench_test_detailed(path=None,
         facet_update_time = t6-t5
         # finish bench
         total_runtime = t6-t0
-        print(f'Bench : {sky_type:8s} | {benchname:8s} - nfacets: {nfacets:3d} - readfits: {fits_input_time:.4f} - skyinit: {initialisation_time:.4f} - skyWCSinit: {sky_wcs_init_time:.4f} - SkyDataInit: {sky_data_init_time:.4f} - FacetsInit: {facet_init_time:.4f} - FacetsUpdate: {facet_update_time:.4f} - total: {total_runtime:.2f}')
+        print(f'Bench : {sky_type:7s} | {benchname:4s} - nfacets: {nfacets:3d} - readfits: {fits_input_time:.4f} - skyinit: {initialisation_time:.4f} - skyWCSinit: {sky_wcs_init_time:.4f} - SkyDataInit: {sky_data_init_time:.4f} - FacetsInit: {facet_init_time:.4f} - FacetsUpdate: {facet_update_time:.4f} - total: {total_runtime:.2f}')
               
 #              %12s"%(sky_type+" | "+benchname), " - nfacets: %3i"%nfacets," - total time :",dt)
         del(bench_sky)
@@ -184,19 +195,12 @@ def bench_facets():
               pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-3.fits"),
               pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-4.fits"),
               pathlib.Path("/home/bonnassieux/Downloads/M31-lowres-LOFAR.fits")]
-    # fitslist=[pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped.fits"),
-    #           pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-1.fits")]
     bench_name = ["656K",
                   "2,5M",
                   "9,9M",
                   "40M",
                   "88M",
                   "141M - full LoTSS field"]
-    # bench_name = ["656K",
-    #               "2,5M"]
-    
-#    fitslist = [pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped.fits")]
-#    bench_name = ["400pix"]
     # build list of facets to iterate over
     nfacetslist=[1,2,3,4,5,7,9,11,15,21,31]
     # initialise bench arrays
@@ -210,41 +214,35 @@ def bench_facets():
         "facet_update_time", 
         "total_runtime"
     ]
-    all_benches=[]
+    xarray_all_benches=[]
+    ndarray_all_benches=[]
     # launch bench
 
-
-    # try this to see if it removes the big spike
-    _=bench_test_detailed(fitslist[0],
-                    nfacets=1,
-                    nfacets_edit=1,
-                    benchname=bench_name[0],
-                    sky_type="xarray")
     for i, path in enumerate(fitslist):
         print()
         print("--------- %24s ---------"%(path.as_posix()))
-        bench_times=[]
+        xarray_bench_times=[]
+        ndarray_bench_times=[]
         for nfacets in nfacetslist:
             times=bench_test_detailed(path,
                     nfacets,
                     nfacets_edit=1,
                     benchname=bench_name[i],
                     sky_type="xarray")
+            xarray_bench_times.append(times)
             ntests=None or len(times)
-            # bench_test(path,
-            #         nfacets,
-            #         nfacets_edit=nfacets,
-            #         benchname=bench_name[i],
-            #         sky_type="ndarray")
-            bench_times.append(times)
-        all_benches.append(bench_times)
+            times=bench_test_detailed(path,
+                    nfacets,
+                    nfacets_edit=nfacets,
+                    benchname=bench_name[i],
+                    sky_type="ndarray")
+            ndarray_bench_times.append(times)
+        xarray_all_benches.append(xarray_bench_times)
+        ndarray_all_benches.append(ndarray_bench_times)
     
-    all_benches = np.array(all_benches)
-    test_labels = np.array(test_labels)
-    print(test_labels.shape)
-    print("all_benches",all_benches.shape) # shape; nfits, ?, ntests
+    xarray_all_benches = np.array(xarray_all_benches)
+    ndarray_test_labels = np.array(ndarray_test_labels)
 
-    print(np.array(all_benches).shape,ntests)
     nfacets = np.array(nfacetslist)**2
 
 
@@ -263,15 +261,6 @@ def bench_facets():
         plt.savefig(test_labels[i])
         print("Saved image as %s.png"%test_labels[i])
         plt.clf()
-
-        # # print()
-        # print("--------- %24s ---------"%(path.as_posix()))
-        # for nfacets in nfacetslist:
-        #     bench_test(path,
-        #             nfacets,
-        #             nfacets_edit=5,
-        #             benchname=bench_name[i],
-        #             sky_type="ndarray")
 
 
 if __name__=="__main__":
