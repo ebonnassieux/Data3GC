@@ -523,10 +523,6 @@ class Sky:
         for facet_key in update_facets:
             facet = self.facets[facet_key]
             for datakey in datakeys:
-                print("facet xmin, xmax",facet.xmin,facet.xmax)
-                print("facet ymin, ymax",facet.ymin,facet.ymax)
-                
-                print("facet shape",facet.data[datakey].values.shape)
                 if self.datatype is xr.DataArray:
                     #  self.data[datakey].isel(x=slice(facet.xmin,facet.xmax),
                     #                          y=slice(facet.ymin,facet.ymax)) = facet.data[datakey].isel(x=slice(facet.xmin,facet.xmax),

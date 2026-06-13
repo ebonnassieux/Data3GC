@@ -191,10 +191,10 @@ def bench_facets():
     # build list of fits file paths to iterate over
     fitslist=[pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped.fits"),
               pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-1.fits"),
-              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-2.fits"),
-              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-3.fits"),
-              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-4.fits"),
-              pathlib.Path("/home/bonnassieux/Downloads/M31-lowres-LOFAR.fits")]
+              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-2.fits")]#,
+            #   pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-3.fits"),
+            #   pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-4.fits"),
+            #   pathlib.Path("/home/bonnassieux/Downloads/M31-lowres-LOFAR.fits")]
     bench_name = ["656K",
                   "2,5M",
                   "9,9M",
@@ -202,8 +202,8 @@ def bench_facets():
                   "88M",
                   "141M - full LoTSS field"]
     # build list of facets to iterate over
-    nfacetslist=[0,3,4,5,7,9,11,15,21,31]
-    nfacetslist=np.tile(nfacetslist,5)
+    nfacetslist=[0,3,4,5,7,9,11,15,21]#,31]
+    nfacetslist=np.tile(nfacetslist,1)
 #    nfacetslist=[0,0,0,1,1,1,5,5,5]
     # initialise bench arrays
     ntests=None
@@ -254,8 +254,8 @@ def bench_facets():
         plt.xlabel("Nfacets")
         plt.ylabel("Runtime [s]")
         for bench_ind in range(len(fitslist)):
-            plt.scatter(nfacets,xarray_all_benches[bench_ind,:,i],label="xarray "+bench_name[bench_ind])
-            plt.sactter(nfacets,ndarray_all_benches[bench_ind,:,i],label="ndarray "+bench_name[bench_ind])
+            plt.plot(nfacets,xarray_all_benches[bench_ind,:,i],label="xarray "+bench_name[bench_ind])
+            plt.plot(nfacets,ndarray_all_benches[bench_ind,:,i],label="ndarray "+bench_name[bench_ind])
         plt.legend()
         ymin = 0.9*np.min(ndarray_all_benches[:,:,i])
         ymax = 1.2*np.max(xarray_all_benches[:,:,i])
