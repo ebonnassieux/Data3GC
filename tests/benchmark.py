@@ -189,12 +189,12 @@ def bench_test_detailed(path=None,
 
 def bench_facets(): 
     # build list of fits file paths to iterate over
-    fitslist=[pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped.fits"),
-              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-1.fits"),
-              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-2.fits"),
-              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-3.fits"),
-              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-4.fits"),
-              pathlib.Path("/home/bonnassieux/Downloads/M31-lowres-LOFAR.fits")]
+    fitslist=[pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped.fits")]#,
+            #   pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-1.fits"),
+            #   pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-2.fits"),
+            #   pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-3.fits"),
+            #   pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-4.fits"),
+            #   pathlib.Path("/home/bonnassieux/Downloads/M31-lowres-LOFAR.fits")]
     bench_name = ["656K",
                   "2,5M",
                   "9,9M",
@@ -202,7 +202,9 @@ def bench_facets():
                   "88M",
                   "141M - full LoTSS field"]
     # build list of facets to iterate over
-    nfacetslist=[1,2,3,4,5,7,9,11]#,15,21,31]
+    nfacetslist=[0,3,4,5,7,9,11]#,15,21,31]
+    nfacetslist=np.tile(nfacetslist,5)
+#    nfacetslist=[0,0,0,1,1,1,5,5,5]
     # initialise bench arrays
     ntests=None
     test_labels=[
@@ -260,7 +262,7 @@ def bench_facets():
         plt.ylim((ymin,ymax))
         plt.grid()
         plt.savefig(test_labels[i])
-        print("Saved image as %s.png"%test_labels[i])
+        print("Saved image as %s_test0facet.png"%test_labels[i])
         plt.clf()
 
 

@@ -193,6 +193,6 @@ if __name__=="__main__":
     # test read from fits
 #    test_read_from_fits()
     # test fits file open, facet initialisation + manipulation, then save
-    #test_full_functionality()
-    test_full_functionality_ndarray()
+    test_full_functionality()
+    #test_full_functionality_ndarray()
 #    test_sky__dataclassinitialisation_facets()

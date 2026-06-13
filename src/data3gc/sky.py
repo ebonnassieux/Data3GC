@@ -314,19 +314,24 @@ class Sky_dataclass:
                 "x":np.arange(self.npix_x),
                 "y":np.arange(self.npix_y),
                 "ra":(("x", "y"), self.ras.value),
-                "dec":(("x", "y"), self.decs.value),
-                "l":(("x", "y"), self.l),
-                "m":(("x", "y"), self.m)
+                "dec":(("x", "y"), self.decs.value)
+#                "l":(("x", "y"), self.l),
+#                "m":(("x", "y"), self.m)
                 }
-        facet_xarr = xr.DataArray(data=np.zeros(self.imshape), 
-                                  dims=dims,
-                                  coords=coords,
-                                  name="temp"
-                                  )
-        for key in self.datakeys:
-            ### careful - this might need to become a copy
-            facet_xarr.name=key
-        self.data = facet_xarr
+        # facet_xarr = xr.DataArray(data=np.zeros(self.imshape), 
+        #                           dims=dims,
+        #                           coords=coords,
+        #                           name="temp"
+        #                           )
+        # for key in self.datakeys:
+        #     ### careful - this might need to become a copy
+        #     facet_xarr.name=key
+        # self.data = facet_xarr
+        self.data = xr.Dataset(
+                        {k: (dims, np.zeros(self.imshape, dtype=np.float32))
+                        for k in self.datakeys},
+                        coords=coords,
+                    )
 
 
     @cached_property
@@ -480,48 +485,7 @@ class Sky:
         self.imshape = (len(freqs),len(stokes),npix, self.npix_y)
         # # initialise coords of data grids
         self.wcs     = WCS(self.wcs_input_dict())
-        self.gridwcs = self.wcs.dropaxis(2).dropaxis(2)
-#        self.make_coord_grids()
-        # initialise the data grids
-#        self.initdata()
-#        self.facets={}
-#         if self.nfacets!=0:
-#             # initialise facet properties
-#             self.set_facet_pixgrid()
-#             for facet_index in range(len(self.facet_phasecenters)):
-#                 # debug
-# #                print()
-# #                print("Initialisation of facet",facet_index)
-#                 # read facet initialisation params
-#                 facet_phasecenter = self.facet_phasecenters[facet_index]
-#                 facetname = facet_phasecenter.to_string('hmsdms')
-#                 verts = self.facetvertices[facet_index]
-#                 xmin,xmax = int(np.min(verts.x)),int(np.max(verts.x))
-#                 ymin,ymax = int(np.min(verts.y)),int(np.max(verts.y))
-#                 # initialise the facet as sky object
-#                 self.facets[facetname]=Sky(skyname=facetname,
-#                                         centrecoords=facet_phasecenter,
-#                                         npix=xmax-xmin,
-#                                         npix_y=ymax-ymin,
-#                                         cellsize=cellsize,
-#                                         freqs=freqs,
-#                                         nfacets=0,
-#                                         stokes=self.stokes
-#                 )
-#                 # initialise region visuals
-#                 self.facets[facetname].sky_reg,self.facets[facetname].grid_reg = \
-#                     self.facets[facetname].region(self.facet_phasecenters[facet_index],
-#                                                   self.gridwcs,
-#                                                   facet_visuals())
-#                 # save vertices info
-#                 self.facets[facetname].xmin = xmin
-#                 self.facets[facetname].xmax = xmax
-#                 self.facets[facetname].ymin = ymin
-#                 self.facets[facetname].ymax = ymax
-#                 # print("phase centre: ",facet_phasecenter)
-#                 # print("x_centre: ",round(0.5*(xmax-xmin)))
-#                 # print("y_centre: ",round(0.5*(ymax-ymin)))
-        
+        self.gridwcs = self.wcs.dropaxis(2).dropaxis(2)        
 
     ### update sky with facet information
    #@timer
@@ -662,7 +626,9 @@ class Sky:
    #@timer
     def initfacets(self):
         self.facets={}
-        if self.nfacets!=0:
+        if self.nfacets==0:
+            return
+        else:
             # initialise facet properties
             self.set_facet_pixgrid()
             for facet_index in range(len(self.facet_phasecenters)):
@@ -690,13 +656,16 @@ class Sky:
                 # read RAs, Decs from sky
                 self.facets[facetname].ras = self.ras[xmin:xmax,ymin:ymax]
                 self.facets[facetname].decs = self.decs[xmin:xmax,ymin:ymax]
-                self.facets[facetname].l = self.l[xmin:xmax,ymin:ymax]
-                self.facets[facetname].m = self.m[xmin:xmax,ymin:ymax]
+#                self.facets[facetname].l = self.l[xmin:xmax,ymin:ymax]
+#                self.facets[facetname].m = self.m[xmin:xmax,ymin:ymax]
                 # init facet data
                 if self.datatype is xr.DataArray:
-                    self.facets[facetname].initdata_xarray()
+                    #self.facets[facetname].initdata_xarray()
+                    self.facets[facetname].data = self.data.isel(x=slice(self.facets[facetname].xmin,self.facets[facetname].xmax),
+                                                                 y=slice(self.facets[facetname].ymin,self.facets[facetname].ymax))
                 elif self.datatype is np.ndarray:
                     self.facets[facetname].initdata_ndarray()
+                    
                 else:
                     return ValueError
                 # initialise region visuals
@@ -786,7 +755,7 @@ class Sky:
  
         '''
         # TODO: this should be a single DataSet!!!
-        self.data={}
+#        self.data={}
         self.datakeys = ["dirty",
                         "restored",
                         "residual",
@@ -803,19 +772,24 @@ class Sky:
                 "x":np.arange(self.npix),
                 "y":np.arange(self.npix_y),
                 "ra":(("x", "y"), self.ras.value),
-                "dec":(("x", "y"), self.decs.value),
-                "l":(("x", "y"), self.l),
-                "m":(("x", "y"), self.m)
+                "dec":(("x", "y"), self.decs.value)
+#                "l":(("x", "y"), self.l),
+#                "m":(("x", "y"), self.m)
                 }
-        facet_xarr = xr.DataArray(data=np.zeros(self.imshape), 
-                                  dims=dims,
-                                  coords=coords,
-                                  name="temp"
-                                  )
-        for key in self.datakeys:
-            ### careful - this might need to become a copy
-            self.data[key] = facet_xarr#.copy()
-            self.data[key].name=key
+        # facet_xarr = xr.DataArray(data=np.zeros(self.imshape), 
+        #                           dims=dims,
+        #                           coords=coords,
+        #                           name="temp"
+        #                           )
+        self.data = xr.Dataset(
+                        {k: (dims, np.zeros(self.imshape, dtype=np.float32))
+                        for k in self.datakeys},
+                        coords=coords,
+                    )
+        # for key in self.datakeys:
+        #     ### careful - this might need to become a copy
+        #     self.data[key] = facet_xarr#.copy()
+        #     self.data[key].name=key
 
     def initdata_ndarray(self) -> None:
         '''
