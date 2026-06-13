@@ -494,6 +494,7 @@ class Sky:
                     update_facets: list | str="all",
                     channel=0,
                     stokes=0,
+                    datatype:np.ndarray|xr.DataArray=xr.DataArray,
                     ) -> None:
         '''
         Function to update sky data with facet data.
@@ -522,10 +523,22 @@ class Sky:
         for facet_key in update_facets:
             facet = self.facets[facet_key]
             for datakey in datakeys:
-                self.data[datakey][channel,
-                                   stokes,
-                                   self.facets[facet_key].xmin:self.facets[facet_key].xmax,
-                                   self.facets[facet_key].ymin:self.facets[facet_key].ymax] = self.facets[facet_key].data[datakey][channel,stokes,:,:].data
+                print("facet xmin, xmax",facet.xmin,facet.xmax)
+                print("facet ymin, ymax",facet.ymin,facet.ymax)
+                
+                print("facet shape",facet.data[datakey].values.shape)
+                if self.datatype is xr.DataArray:
+                    #  self.data[datakey].isel(x=slice(facet.xmin,facet.xmax),
+                    #                          y=slice(facet.ymin,facet.ymax)) = facet.data[datakey].isel(x=slice(facet.xmin,facet.xmax),
+                                                                                                        # y=slice(facet.ymin,facet.ymax))
+                    ### TODO: investigate the behaviour of removing 1 from xmin, xmax below. it is super odd.
+                    self.data[datakey].loc[dict(x=slice(facet.xmin, facet.xmax-1), 
+                                                y=slice(facet.ymin, facet.ymax-1))] = facet.data[datakey].values
+                elif self.datatype is np.ndarray:
+                    self.data[datakey][channel,
+                                    stokes,
+                                    self.facets[facet_key].xmin:self.facets[facet_key].xmax,
+                                    self.facets[facet_key].ymin:self.facets[facet_key].ymax] = facet.data[datakey][channel,stokes,:,:].data
 
 
 
@@ -563,13 +576,8 @@ class Sky:
             facet = self.facets[facet_key]
             for datakey in datakeys:
                 if self.datatype is xr.DataArray:
-                    facet.data[datakey].data[channel,
-                                            stokes,
-                                            :,
-                                            :] = self.data[datakey].data[channel,
-                                                                       stokes,
-                                                                       facet.xmin:facet.xmax,
-                                                                       facet.ymin:facet.ymax]
+                    facet.data[datakey] = self.data[datakey].isel(x=slice(facet.xmin,facet.xmax),
+                                                                  y=slice(facet.ymin,facet.ymax))
                 elif self.datatype is np.ndarray:
                     facet.data[datakey][channel,
                                         stokes,
