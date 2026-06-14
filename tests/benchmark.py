@@ -296,7 +296,8 @@ def plot_bench():
 
         nrealisations = xarray_all_benches.shape[0]
 
-        
+        ndcolor="k"
+        xarrcolor="g"
 
 
         for bench_ind in range(xarray_all_benches.shape[0]):
@@ -306,13 +307,13 @@ def plot_bench():
             this_test_ndarr = ndarray_all_benches[bench_ind,:,i].ravel()
             a_ndarr_norm,b_ndarr = np.polyfit(nfacets/np.max(nfacets),this_test_ndarr/np.max(this_test_ndarr),1)
             a_ndarr,b_ndarr = np.polyfit(nfacets,this_test_ndarr,1)
-            plt.scatter(nfacets,xarray_all_benches[bench_ind,:,i])#,label="xarray "+bench_name[bench_ind])
-            plt.plot(nfacets,nfacets*a_xarr+b_xarr,label="%f1.2"%a_xarr_norm+bench_name[bench_ind])
-            plt.scatter(nfacets,ndarray_all_benches[bench_ind,:,i])#,label="ndarray "+bench_name[bench_ind])
-            plt.plot(nfacets,nfacets*a_ndarr+b_ndarr,label="%f1.2"%a_ndarr_norm+bench_name[bench_ind])
+            plt.scatter(nfacets,xarray_all_benches[bench_ind,:,i],c=xarrcolor)#,label="xarray "+bench_name[bench_ind])
+            plt.plot(nfacets,nfacets*a_xarr+b_xarr,label="xarray, %f1.2"%a_xarr_norm+bench_name[bench_ind],c=xarrcolor)
+            plt.scatter(nfacets,ndarray_all_benches[bench_ind,:,i],c=ndcolor)#,label="ndarray "+bench_name[bench_ind])
+            plt.plot(nfacets,nfacets*a_ndarr+b_ndarr,label="ndarray, %f1.2"%a_ndarr_norm+bench_name[bench_ind],c=ndcolor)
         plt.legend()
-        ymin = 0.9*np.min(ndarray_all_benches[:,:,i])
-        ymax = 1.2*np.max(xarray_all_benches[:,:,i])
+        ymin = 0.9*np.min(xarray_all_benches[:,:,i])
+        ymax = 1.2*np.max(ndarray_all_benches[:,:,i])
         plt.ylim((ymin,ymax))
         plt.grid()
         plt.savefig(test_labels[i])
