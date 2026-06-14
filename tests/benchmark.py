@@ -214,6 +214,12 @@ def bench_facets():
         "facet_update_time", 
         "total_runtime"
     ]
+    # save params
+    np.save("test_labels",test_labels)
+    np.save("nfacetslist",nfacetslist)
+    np.save("fitslist",np.array(fitslist))
+    np.save("bench_name",np.array(bench_name))
+
     xarray_all_benches=[]
     ndarray_all_benches=[]
     # launch bench
@@ -268,5 +274,52 @@ def bench_facets():
         plt.clf()
 
 
+def plot_bench():
+    # load benches
+    xarray_all_benches=np.load("xarray_bench.npy")
+    ndarray_all_benches=np.load("ndarray_bench.npy")
+    nfacetslist=np.load("nfacetslist.npy")
+    test_labels=np.load("test_labels.npy")
+#    fitslist=np.load("fitslist.npy")
+    bench_name=np.load("bench_name.npy")
+
+    nfacets = np.array(nfacetslist)**2
+
+    ntests=xarray_all_benches.shape[-1]
+
+
+    for i in range(ntests):
+        plt.subplots(figsize=(8,8))
+        plt.title(test_labels[i])
+        plt.xlabel("Nfacets")
+        plt.ylabel("Runtime [s]")
+
+        nrealisations = xarray_all_benches.shape[0]
+
+        
+
+
+        for bench_ind in range(xarray_all_benches.shape[0]):
+            this_test_xarr = xarray_all_benches[bench_ind,:,i].ravel()
+            a_xarr_norm,b_xarr = np.polyfit(nfacets/np.max(nfacets),this_test_xarr/np.max(this_test_xarr),1)
+            a_xarr,b_xarr = np.polyfit(nfacets,this_test_xarr,1)
+            this_test_ndarr = ndarray_all_benches[bench_ind,:,i].ravel()
+            a_ndarr_norm,b_ndarr = np.polyfit(nfacets/np.max(nfacets),this_test_ndarr/np.max(this_test_ndarr),1)
+            a_ndarr,b_ndarr = np.polyfit(nfacets,this_test_ndarr,1)
+            plt.scatter(nfacets,xarray_all_benches[bench_ind,:,i])#,label="xarray "+bench_name[bench_ind])
+            plt.plot(nfacets,nfacets*a_xarr+b_xarr,label="%f1.2"%a_xarr_norm+bench_name[bench_ind])
+            plt.scatter(nfacets,ndarray_all_benches[bench_ind,:,i])#,label="ndarray "+bench_name[bench_ind])
+            plt.plot(nfacets,nfacets*a_ndarr+b_ndarr,label="%f1.2"%a_ndarr_norm+bench_name[bench_ind])
+        plt.legend()
+        ymin = 0.9*np.min(ndarray_all_benches[:,:,i])
+        ymax = 1.2*np.max(xarray_all_benches[:,:,i])
+        plt.ylim((ymin,ymax))
+        plt.grid()
+        plt.savefig(test_labels[i])
+        print("Saved image as %s.png"%test_labels[i])
+        plt.clf()
+
+
 if __name__=="__main__":
-    bench_facets()
+    #bench_facets()
+    plot_bench()
