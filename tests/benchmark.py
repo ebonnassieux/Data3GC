@@ -243,6 +243,10 @@ def bench_facets():
     xarray_all_benches = np.array(xarray_all_benches)
     ndarray_all_benches = np.array(ndarray_all_benches)
 
+    # save benches
+    np.save("xarray_bench",xarray_all_benches)
+    np.save("ndarray_bench",ndarray_all_benches)
+
     nfacets = np.array(nfacetslist)**2
 
 
