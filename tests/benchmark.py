@@ -66,8 +66,6 @@ def bench_test(path=None,
         dt = (t1-t0).total_seconds()
         print(f'Bench : {sky_type:8s} | {benchname:8s} - nfacets: {nfacets:3d} - total time: {dt}')
               
-#              %12s"%(sky_type+" | "+benchname), " - nfacets: %3i"%nfacets," - total time :",dt)
-        del(bench_sky)
 
 
 def bench_test_detailed(path=None,
@@ -191,10 +189,10 @@ def bench_facets():
     # build list of fits file paths to iterate over
     fitslist=[pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped.fits"),
               pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-1.fits"),
-              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-2.fits")]#,
-            #   pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-3.fits"),
-            #   pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-4.fits"),
-            #   pathlib.Path("/home/bonnassieux/Downloads/M31-lowres-LOFAR.fits")]
+              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-2.fits"),
+              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-3.fits"),
+              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-4.fits"),
+              pathlib.Path("/home/bonnassieux/Downloads/M31-lowres-LOFAR.fits")]
     bench_name = ["656K",
                   "2,5M",
                   "9,9M",
@@ -202,8 +200,8 @@ def bench_facets():
                   "88M",
                   "141M - full LoTSS field"]
     # build list of facets to iterate over
-    nfacetslist=[0,3,4,5,7,9,11,15,21]#,31]
-    nfacetslist=np.tile(nfacetslist,1)
+    nfacetslist=[0,3,4,5,7,9,11,15]#,21,31]
+    nfacetslist=np.tile(nfacetslist,5)
 #    nfacetslist=[0,0,0,1,1,1,5,5,5]
     # initialise bench arrays
     ntests=None
@@ -262,7 +260,7 @@ def bench_facets():
         plt.ylim((ymin,ymax))
         plt.grid()
         plt.savefig(test_labels[i])
-        print("Saved image as %s_test0facet.png"%test_labels[i])
+        print("Saved image as %s.png"%test_labels[i])
         plt.clf()
 
 

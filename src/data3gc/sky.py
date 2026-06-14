@@ -534,7 +534,7 @@ class Sky:
                     self.data[datakey][channel,
                                     stokes,
                                     self.facets[facet_key].xmin:self.facets[facet_key].xmax,
-                                    self.facets[facet_key].ymin:self.facets[facet_key].ymax] = facet.data[datakey][channel,stokes,:,:].data
+                                    self.facets[facet_key].ymin:self.facets[facet_key].ymax] = facet.data[datakey][channel,stokes,:,:]
 
 
 
