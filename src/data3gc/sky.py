@@ -740,13 +740,13 @@ class Sky:
                                     origin="lower")
                     # add the facet region
                     this_facet.grid_reg.plot(ax=ax)
-                # underlay the full sky
-                ax.imshow(self.data[datakey][channel,stokes,:,:].data, 
-                          vmin=vmin, 
-                          vmax=vmax, 
-                          origin='lower',
-                          alpha=0.1,
-                          transform=ax.get_transform(this_facet.gridwcs))
+            # underlay the full sky
+            ax.imshow(self.data[datakey][channel,stokes,:,:].data, 
+                        vmin=vmin, 
+                        vmax=vmax, 
+                        origin='lower',
+                        alpha=0.1,
+                        transform=ax.get_transform(self.gridwcs))
         plt.show()
 
 
@@ -758,7 +758,6 @@ class Sky:
         :param self: Sky object
  
         '''
-        # TODO: this should be a single DataSet!!!
 #        self.data={}
         self.datakeys = ["dirty",
                         "restored",

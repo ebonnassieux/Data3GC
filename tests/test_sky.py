@@ -90,7 +90,7 @@ def test_full_functionality(show_ims=True):
     #p = pathlib.Path("/home/bonnassieux/Downloads/M31-lowres-LOFAR.fits")
     filename=p.absolute().as_posix()
     test_sky_m31_cropped = Sky.from_fits(filename,
-                                        nfacets=3,
+                                        nfacets=11,
                                         skyname="M31_cropped")
     test_sky_m31_cropped.update_facets("restored")
 
@@ -98,7 +98,7 @@ def test_full_functionality(show_ims=True):
     # show full image
     if show_ims:
         test_sky_m31_cropped.show(vmin=-0.0005,vmax=0.0015)
-    edit_facets = [0,1,3,8]#,11,18,23]
+    edit_facets = [0,1,3,8,11,18,23,33,45,48,51,59,106]
     
     # show before noise is added
     if show_ims:
