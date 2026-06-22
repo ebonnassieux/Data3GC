@@ -189,10 +189,10 @@ def bench_facets():
     # build list of fits file paths to iterate over
     fitslist=[pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped.fits"),
               pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-1.fits"),
-              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-2.fits"),
-              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-3.fits"),
-              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-4.fits"),
-              pathlib.Path("/home/bonnassieux/Downloads/M31-lowres-LOFAR.fits")]
+              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-2.fits")]#,
+#              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-3.fits"),
+#              pathlib.Path("tests/Data/M31-lowres-LOFAR-cropped-4.fits"),
+#              pathlib.Path("/home/bonnassieux/Downloads/M31-lowres-LOFAR.fits")]
     bench_name = ["656K",
                   "2,5M",
                   "9,9M",
@@ -200,7 +200,7 @@ def bench_facets():
                   "88M",
                   "141M - full LoTSS field"]
     # build list of facets to iterate over
-    nfacetslist=[0,3,4,5,7,9,11,15]#,21,31]
+    nfacetslist=[0,3,4,5,7,9,11]#,15]#,21,31]
     nfacetslist=np.tile(nfacetslist,5)
 #    nfacetslist=[0,0,0,1,1,1,5,5,5]
     # initialise bench arrays
@@ -349,5 +349,5 @@ def plot_bench():
 
 
 if __name__=="__main__":
-    #bench_facets()
+    bench_facets()
     plot_bench()

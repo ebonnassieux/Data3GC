@@ -570,11 +570,18 @@ class Sky:
         # update facet data from sky data using the underlying ndarray buffer
         for facet_key in update_facets:
             facet = self.facets[facet_key]
-            for datakey in datakeys:
-                if self.datatype is xr.DataArray:
-                    facet.data[datakey] = self.data[datakey].isel(x=slice(facet.xmin,facet.xmax),
-                                                                  y=slice(facet.ymin,facet.ymax))
-                elif self.datatype is np.ndarray:
+            
+            
+            if self.datatype is xr.DataArray:
+                facet.data.values = self.data.loc[dict(x=slice(facet.xmin, facet.xmax-1), 
+                                                       y=slice(facet.ymin, facet.ymax-1))] 
+                    # facet.data[datakey] = self.data[datakey].isel(x=slice(facet.xmin,facet.xmax),
+                    #                                               y=slice(facet.ymin,facet.ymax))
+                    # self.data[datakey].loc[dict(x=slice(facet.xmin, facet.xmax-1), 
+                    #                         y=slice(facet.ymin, facet.ymax-1))] = facet.data[datakey].values
+                    
+            elif self.datatype is np.ndarray:
+                for datakey in datakeys:
                     facet.data[datakey][channel,
                                         stokes,
                                         :,
