@@ -168,10 +168,10 @@ def bench_test_detailed(path=None,
                 if i in edit_facets:
                     this_facet_data = bench_sky.facets[key].data["restored"]
                     # add noise to this facet to show we can edit specific areas
-                    noisevals = float(i+1)*np.random.normal(loc=0,
-                                                        scale=0.001,
-                                                        size=this_facet_data.shape)
-                    bench_sky.facets[key].data["restored"] = this_facet_data + noisevals
+                    # noisevals = float(i+1)*np.random.normal(loc=0,
+                    #                                     scale=0.001,
+                    #                                     size=this_facet_data.shape)
+                    bench_sky.facets[key].data["restored"] = this_facet_data + 0.1*i#noisevals
             ### TODO: update sky only for edited facets
             bench_sky.update_sky(update_facets=edit_facets) #update_facets=editkeylist)
         t6 = time() # facet update time
@@ -200,7 +200,7 @@ def bench_facets():
                   "88M",
                   "141M - full LoTSS field"]
     # build list of facets to iterate over
-    nfacetslist=[0,3,4,5,7,9,11]#,15]#,21,31]
+    nfacetslist=[3,4,5,7,9,11]#,15]#,21,31]
     nfacetslist=np.tile(nfacetslist,5)
 #    nfacetslist=[0,0,0,1,1,1,5,5,5]
     # initialise bench arrays
@@ -239,7 +239,7 @@ def bench_facets():
             ntests=None or len(times)
             times=bench_test_detailed(path,
                     nfacets,
-                    nfacets_edit=nfacets,
+                    nfacets_edit=1,
                     benchname=bench_name[i],
                     sky_type="ndarray")
             ndarray_bench_times.append(times)
