@@ -693,7 +693,8 @@ class Sky:
              channel=0,
              stokes=0,
              vmin: float=-8.e-5,
-             vmax: float=2.e-4
+             vmax: float=2.e-4,
+             filename:str=None
              ) -> None:
         '''
         Function to show the current sky, requesting specific facet subsets
@@ -754,7 +755,11 @@ class Sky:
                         origin='lower',
                         alpha=0.1,
                         transform=ax.get_transform(self.gridwcs))
-        plt.show()
+            
+        if filename is None:
+            plt.show()
+        else:
+            plt.savefig(filename)
 
 
    #@timer
