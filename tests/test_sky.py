@@ -98,12 +98,12 @@ def test_full_functionality(show_ims=True):
 
     # show full image
     if show_ims:
-        test_sky_m31_cropped.show(vmin=-0.0005,vmax=0.0015)
+        test_sky_m31_cropped.show(vmin=-0.0005,vmax=0.0015,filename="M31.before_editing.png")
     edit_facets = [0,1,3,8]#,11,18,23,33,45,48,51,59,106]
     
     # show before noise is added
     if show_ims:
-        test_sky_m31_cropped.show(plot_facets=list(edit_facets),vmin=-0.0005,vmax=0.0015)
+        test_sky_m31_cropped.show(plot_facets=list(edit_facets),vmin=-0.0005,vmax=0.0015,filename="M31.before_editing_withfacets.png")
 #    print("Showed sky before noise added")
     keylist = list(test_sky_m31_cropped.facets.keys())#[edit_facets]
     for i, key in enumerate(keylist):
@@ -116,13 +116,13 @@ def test_full_functionality(show_ims=True):
             test_sky_m31_cropped.facets[key].data["restored"] = this_facet_data + 0.1*noisevals
 #    print("Added noise to specified facets")
     if show_ims:
-        test_sky_m31_cropped.show(plot_facets=list(edit_facets),vmin=-0.0005,vmax=0.0015)
+        test_sky_m31_cropped.show(plot_facets=list(edit_facets),vmin=-0.0005,vmax=0.0015,filename="M31.after_editing.png")
     # update sky with facet information
 #    test_sky_m31_cropped.update_facets(datakey="restored",update_facets=edit_facets)
     test_sky_m31_cropped.update_sky()
     print("Updated sky")
     if show_ims:
-        test_sky_m31_cropped.show(vmin=-0.0005,vmax=0.0015)
+        test_sky_m31_cropped.show(vmin=-0.0005,vmax=0.0015,filename="M31.edited_sky.png")
     
     
     # test serialisation
