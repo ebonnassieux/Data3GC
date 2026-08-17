@@ -1,0 +1,324 @@
+# Defines Jones object properties.
+
+from typing import TypedDict, Required, Optional, NotRequired, Protocol
+from astropy.coordinates import SkyCoord
+import astropy.units as u
+import numpy.typing
+import xarray as xr
+from attrs import define, field
+import numpy as np
+from pathlib import Path
+
+# define a minimum requirement for all Jones classes
+# class JonesProtocol(Protocol):
+#     # define slots
+#     __slots__ = ('name',
+#                  'msname',
+#                  'gains',
+#                  'gaintype',
+#                  'freqs',
+#                  'times',
+#                  'corrs')
+#     name : Required[str]
+#     '''Name of these gains.'''
+#     msname : Optional[str] = field(default=None,repr=False)
+#     '''Name of the Measurement Set associated to these gains.'''
+#     gains : Required[xr.Dataset]=field(init=False)
+#     '''Gain values'''
+#     gaintype : str
+#     '''Description of the gain type (eg scalar, full-jones, phase, amp...)'''
+#     freqs : tuple[float]
+#     '''Frequency coordinates for the gains'''
+#     times : tuple[float]
+#     '''Time coordinates for the gains'''
+#     corrs : tuple[float]
+#     '''Correlation labels for the gains'''
+
+#     # this gets called automatically after __init__ runs.
+#     # it is the standard way to initialise computed quantities.
+#     def __attrs_post_init__(self):
+#         self.dataset = xr.Dataset(
+#             coords={
+#                 'antenna': self.antennas,
+#                 'time': self.times,
+#                 'freq': self.freqs
+#            }
+#         )
+
+# class TypedDicoModel(TypedDict):
+#     '''This is more for reference than for actual use. Describes a killMS sols file.'''
+#     filename : Required[str]
+#     MSName : Required[str]
+#     '''Name of the MS associated with this DicoSols'''
+#     MSNameTime0 : Required[float]
+#     '''Starting time of the MS in MJDs.'''
+#     Sols : Required[np.ndarray]
+#     '''Gain solutions'''
+#     StationNames : Required[np.ndarray]
+#     '''Names of the antennas associated with these gains'''
+#     SkyModel : Required[np.ndarray]
+#     '''SkyModel used to generate these gains'''
+#     ClusterCat : Required[np.ndarray]
+#     '''Catalog of the direction clusters associated with these gains'''
+#     SourceCatSub : Required[np.ndarray]
+#     '''Catalog of sources to be subtracted'''
+#     ModelName : Required[np.ndarray]
+#     '''Filename of the skymodel used to generate gains'''
+#     FreqDomains : Required[np.ndarray]
+#     '''Frequency coordinates for the gains'''
+#     BeamTimes : Required[np.ndarray]
+#     '''Time values at which beams are evaluated'''
+
+@define
+class xJones():
+    # __slots__ = ('name',
+    #             'gaintype',
+    #             'directions',
+    #             'antennas',
+    #             'times',
+    #             'freqs',
+    #             'params',
+    #             'msname',
+    #             'comments')
+    # required metadata
+    name :  Required[str] = field(repr=True)
+    '''Name of these gains.'''
+    gaintype : Required[str] = field(repr=True)
+    '''Description of the gain type (eg scalar, full-jones, phase, amp...)'''
+    # coordinate axes
+    directions : Optional[SkyCoord] = field(default=SkyCoord(0.*u.deg,0*u.deg,frame="fk5"))
+    '''Coordinates for direction-dependent gains. Defaults to None for direction-independent gains.'''
+    antennas : Required[np.typing.NDArray[np.str_]] = field(repr=True,
+                                                            factory=lambda: np.array([],dtype=np.str_))
+    '''Names of the antennas associated with gains.'''
+    times : Required[np.typing.NDArray[np.float64]] = field(repr=True,
+                                                            factory=lambda: np.array([],dtype=np.float64))
+    '''Time coordinates for the gains'''
+    freqs : Required[np.typing.NDArray[np.float64]] = field(repr=True,
+                                                            factory=lambda: np.array([],dtype=np.float64))
+    '''Frequency coordinates for the gains'''
+    params : Required[np.typing.NDArray[np.str_]] = field(repr=True,
+                                                            factory=lambda: np.array([],dtype=np.str_))
+    '''String descriptions of gain parameters. For Jones matrix vals, can be XX, XY...for parametric expressions, can be A, P, TEC...'''
+    # define data
+    gains : xr.Dataset = field(init=False)
+    '''Antenna gains stored as an xarray table, with other attributes defining coordinates or metadata.'''
+    
+     # optional metadata
+    msname : Optional[str] = field(default=None,repr=False)
+    '''Name of the Measurement Set associated to these gains.'''
+    comments : Optional[np.typing.NDArray[np.str_]] = field(repr=True,
+                                                            factory=lambda: np.array([],dtype='U'))
+    '''Optional comments'''
+    ### generate the below on-the-fly?
+    # # optional coordinates
+    # gains_t0 : Optional[np.typing.NDArray[np.float64]] = field(repr=True,
+    #                                                         factory=lambda: np.array([],dtype=np.float64))
+    # '''Time-interval start for gain solutions'''
+    # gains_t1 : Optional[np.typing.NDArray[np.float64]] = field(repr=True,
+    #                                                         factory=lambda: np.array([],dtype=np.float64))
+    # '''Time-interval end for gain solutions'''
+    # gains_nu0 : Required[np.typing.NDArray[np.float64]] = field(repr=True,
+    #                                                         factory=lambda: np.array([],dtype=np.float64))
+    # '''Frequency-interval start for gain solutions'''
+    # gains_nu1 : Required[np.typing.NDArray[np.float64]] = field(repr=True,
+    #                                                         factory=lambda: np.array([],dtype=np.float64))
+    # '''Frequency-interval end for gain solutions'''
+
+
+    # this gets called automatically after __init__ runs.
+    # it is the standard way to initialise computed quantities.
+    def __attrs_post_init__(self):
+
+
+        dims=["dir",
+              "antennas",
+              "times",
+              "freqs",
+              "params"]
+        coords={"dir":self.directions,
+                "antennas":self.antennas,
+                "times":self.times,
+                "freqs":self.freqs,
+                "params":self.params
+                }
+#        print(len(self.directions),len(self.antennas))
+        self.gains = xr.Dataset(data = np.zeros(self.shape),
+                                dims=dims,
+                                coords=coords,
+                                name=self.name)
+    
+
+
+
+
+
+
+
+        self.gains = xr.Dataset(
+            coords={
+                'antenna': self.antennas,
+                'time': self.times,
+                'freq': self.freqs,
+                'param': self.params
+            }
+        )
+
+
+
+
+################### we are here ######################
+
+
+
+
+
+
+
+
+
+#     @classmethod
+#     def from_solsnpz(cls,
+#                      filename):
+#         """Read a killMS .sols.npz file and create an xSols object."""
+#         fname = Path(filename).absolute().as_posix()
+#         data = np.load(fname, allow_pickle=True)
+        
+#         # Extract metadata
+#         msname = str(data['MSName'])
+#         msname_time0 = float(data['MSNameTime0'])
+#         station_names = data['StationNames']
+#         freqs = data['FreqDomains']
+#         beam_times = data['BeamTimes']
+        
+#         # Extract solution data
+#         sols_struct = data['Sols']
+        
+#         # Parse the structured array
+#         # Sols has fields: t0, t1, G, Stats
+#         # t0 and t1 are scalar floats for each time slot
+#         # G has shape (1, n_antennas, 1, 2, 2) - complex64 Jones matrices
+        
+#         n_times = len(sols_struct)
+#         n_antennas = len(station_names)
+        
+#         # Extract time intervals (t0 and t1 are scalars in the structured array)
+#         gains_t0 = np.array([float(s['t0']) for s in sols_struct])
+#         gains_t1 = np.array([float(s['t1']) for s in sols_struct])
+        
+#         # Extract gain values
+#         # G has shape (1, n_antennas, 1, 2, 2) per time slot
+#         # We want shape (n_times, n_antennas, 2, 2)
+#         gains_list = []
+#         for s in sols_struct:
+#             g = s['G'][0]  # shape (n_antennas, 1, 2, 2)
+#             g = g[:, 0, :, :]  # shape (n_antennas, 2, 2)
+#             gains_list.append(g)
+#         gains = np.stack(gains_list, axis=0)  # shape (n_times, n_antennas, 2, 2)
+        
+#         # For times coordinate, use midpoint of intervals
+#         times = (gains_t0 + gains_t1) / 2
+        
+#         # For freqs, use midpoint of frequency domains
+#         # freqs shape is (n_freq_domains, 2)
+#         freqs_center = np.mean(freqs, axis=1)
+        
+#         # Set defaults for optional fields
+# #        directions = None  # Direction-independent gains for now
+#         name = Path(filename).stem
+#         comments = ""
+        
+#         # Add frequency interval info if available
+#         if freqs.shape[1] == 2:
+#             gains_nu0 = freqs[:, 0]
+#             gains_nu1 = freqs[:, 1]
+#         else:
+#             gains_nu0 = freqs_center
+#             gains_nu1 = freqs_center
+        
+#         # Create xSols instance with attrs
+#         return cls(
+#             name=name,
+#             msname=msname,
+#             comments=comments,
+#             gaintype="full-jones",
+# #            directions=directions,
+#             antennas=station_names,
+#             times=times,
+#             gains_t0=gains_t0,
+#             gains_t1=gains_t1,
+#             freqs=freqs_center,
+#             gains_nu0=gains_nu0,
+#             gains_nu1=gains_nu1,
+#             gains=gains,
+#         )
+        
+#     def to_solsnpz(self,
+#                    filename):
+#         """Write to killMS sols.npz format."""
+#         fname = Path(filename).absolute().as_posix()
+        
+#         # Prepare the structured array for Sols
+#         # Sols has fields: t0, t1, G, Stats
+#         n_times = len(self.times)
+#         n_antennas = len(self.antennas)
+        
+#         # Create dtype for Sols structured array
+#         # G has shape (1, n_antennas, 1, 2, 2)
+#         # Stats has shape (1, n_antennas, 4) - we'll use zeros for now
+#         sol_dtype = np.dtype([
+#             ('t0', np.float64),
+#             ('t1', np.float64),
+#             ('G', np.complex64, (1, n_antennas, 1, 2, 2)),
+#             ('Stats', np.float32, (1, n_antennas, 4))
+#         ])
+        
+#         # Build Sols array
+#         sols_list = []
+#         for t_idx in range(n_times):
+#             t0 = self.gains_t0[t_idx]
+#             t1 = self.gains_t1[t_idx]
+            
+#             # Extract gains for this time slot: shape (n_antennas, 2, 2)
+#             g = self.gains[t_idx, :, :, :]  # shape (n_antennas, 2, 2)
+            
+#             # Reshape to (1, n_antennas, 1, 2, 2)
+#             g = g[np.newaxis, :, np.newaxis, :, :]  # shape (1, n_antennas, 1, 2, 2)
+            
+#             # Convert to complex64
+#             g = g.astype(np.complex64)
+            
+#             # Stats - use zeros for now
+#             stats = np.zeros((1, n_antennas, 4), dtype=np.float32)
+            
+#             sols_list.append((t0, t1, g, stats))
+        
+#         sols_array = np.array(sols_list, dtype=sol_dtype)
+        
+#         # Prepare other arrays
+#         # FreqDomains: shape (n_freqs, 2)
+#         if hasattr(self, 'freqs') and self.freqs is not None:
+#             if hasattr(self, 'gains_nu0') and hasattr(self, 'gains_nu1'):
+#                 freqs = np.stack([self.gains_nu0, self.gains_nu1], axis=1)
+#             else:
+#                 # Use freqs as center and create a small bandwidth
+#                 freqs = np.column_stack([self.freqs - 1e6, self.freqs + 1e6])
+#         else:
+#             freqs = np.array([[1.0e8, 2.0e8]], dtype=np.float64)  # default
+        
+#         # Save to npz file
+#         np.savez(
+#             fname,
+#             MSName=self.msname,
+#             MSNameTime0=np.float64(0.0),  # We don't have this info
+#             Sols=sols_array,
+#             StationNames=self.antennas,
+#             SkyModel=np.array([], dtype=object),  # Placeholder
+#             ClusterCat=np.array([], dtype=object),  # Placeholder
+#             SourceCatSub=np.array([], dtype=object),  # Placeholder
+#             ModelName=np.array(self.name, dtype='<U18'),
+#             FreqDomains=freqs,
+#             BeamTimes=np.array([], dtype=np.float64)
+#         )
+        
+#         return fname
