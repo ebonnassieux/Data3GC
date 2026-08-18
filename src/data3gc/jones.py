@@ -47,7 +47,7 @@ class xJones:
         self.comments=comments
         # build xarray shape
         if directions==None:
-            directions=[0]
+            directions=[None]
         xshape = (len(directions),len(antennas),len(times),len(freqs),len(params))
         # build xarray coords
         dims=["dir",
@@ -72,9 +72,15 @@ class xJones:
         # build xarray dataset
         self.gains = xr.Dataset(
                         {self.name: (dims, np.zeros(xshape, dtype=np.float32))},
-                        coords=coords
+                        coords=coords,
+                        attrs=dict(gaintype=gaintype,
+                                   msname=msname,
+                                   comments=comments),
                     )
-        ...
+    
+    def __repr__(self):
+        '''Return the underlying xarray dataset representation'''
+        return self.gains.__repr__()
 
 # @define
 # class xJonesInput:
