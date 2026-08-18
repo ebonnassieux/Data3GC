@@ -88,7 +88,7 @@ class xJones():
     # coordinate axes
     directions : Optional[SkyCoord] = field(default=SkyCoord(0.*u.deg,0*u.deg,frame="fk5"))
     '''Coordinates for direction-dependent gains. Defaults to None for direction-independent gains.'''
-    antennas : Required[np.typing.NDArray[np.str_]] = field(repr=True,
+    antennas : Required[np.typing.NDArray[np.str_]] = field(repr=lambda value: f"array({len(value)})",
                                                             factory=lambda: np.array([],dtype=np.str_))
     '''Names of the antennas associated with gains.'''
     times : Required[np.typing.NDArray[np.float64]] = field(repr=True,
