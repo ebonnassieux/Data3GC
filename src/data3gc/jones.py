@@ -1,6 +1,6 @@
 # Defines Jones object properties.
-
-from typing import TypedDict, Required, Optional, NotRequired, Protocol
+from __future__ import annotations
+from typing import TypedDict, Required, Optional, NotRequired, Protocol, Self
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 import numpy.typing
@@ -9,144 +9,138 @@ from attrs import define, field
 import numpy as np
 from pathlib import Path
 
-# define a minimum requirement for all Jones classes
-# class JonesProtocol(Protocol):
-#     # define slots
-#     __slots__ = ('name',
-#                  'msname',
-#                  'gains',
-#                  'gaintype',
-#                  'freqs',
-#                  'times',
-#                  'corrs')
-#     name : Required[str]
-#     '''Name of these gains.'''
-#     msname : Optional[str] = field(default=None,repr=False)
-#     '''Name of the Measurement Set associated to these gains.'''
-#     gains : Required[xr.Dataset]=field(init=False)
-#     '''Gain values'''
-#     gaintype : str
-#     '''Description of the gain type (eg scalar, full-jones, phase, amp...)'''
-#     freqs : tuple[float]
-#     '''Frequency coordinates for the gains'''
-#     times : tuple[float]
-#     '''Time coordinates for the gains'''
-#     corrs : tuple[float]
-#     '''Correlation labels for the gains'''
-
-#     # this gets called automatically after __init__ runs.
-#     # it is the standard way to initialise computed quantities.
-#     def __attrs_post_init__(self):
-#         self.dataset = xr.Dataset(
-#             coords={
-#                 'antenna': self.antennas,
-#                 'time': self.times,
-#                 'freq': self.freqs
-#            }
-#         )
-
-# class TypedDicoModel(TypedDict):
-#     '''This is more for reference than for actual use. Describes a killMS sols file.'''
-#     filename : Required[str]
-#     MSName : Required[str]
-#     '''Name of the MS associated with this DicoSols'''
-#     MSNameTime0 : Required[float]
-#     '''Starting time of the MS in MJDs.'''
-#     Sols : Required[np.ndarray]
-#     '''Gain solutions'''
-#     StationNames : Required[np.ndarray]
-#     '''Names of the antennas associated with these gains'''
-#     SkyModel : Required[np.ndarray]
-#     '''SkyModel used to generate these gains'''
-#     ClusterCat : Required[np.ndarray]
-#     '''Catalog of the direction clusters associated with these gains'''
-#     SourceCatSub : Required[np.ndarray]
-#     '''Catalog of sources to be subtracted'''
-#     ModelName : Required[np.ndarray]
-#     '''Filename of the skymodel used to generate gains'''
-#     FreqDomains : Required[np.ndarray]
-#     '''Frequency coordinates for the gains'''
-#     BeamTimes : Required[np.ndarray]
-#     '''Time values at which beams are evaluated'''
 
 @define
-class xJones():
-    # __slots__ = ('name',
-    #             'gaintype',
-    #             'directions',
-    #             'antennas',
-    #             'times',
-    #             'freqs',
-    #             'params',
-    #             'msname',
-    #             'comments')
-    # required metadata
-    name :  Required[str] = field(repr=True)
+class xJones:
+    gains: xr.Dataset
+    '''xarray dataset containing the Jones terms with itss coordinates. These may be parametrised.'''
+    name:str
     '''Name of these gains.'''
-    gaintype : Required[str] = field(repr=True)
+    gaintype:str
     '''Description of the gain type (eg scalar, full-jones, phase, amp...)'''
-    # coordinate axes
-    directions : Optional[SkyCoord] = field(default=SkyCoord(0.*u.deg,0*u.deg,frame="fk5"))
-    '''Coordinates for direction-dependent gains. Defaults to None for direction-independent gains.'''
-    antennas : Required[np.typing.NDArray[np.str_]] = field(repr=lambda value: f"array({len(value)})",
-                                                            factory=lambda: np.array([],dtype=np.str_))
-    '''Names of the antennas associated with gains.'''
-    times : Required[np.typing.NDArray[np.float64]] = field(repr=True,
-                                                            factory=lambda: np.array([],dtype=np.float64))
-    '''Time coordinates for the gains'''
-    freqs : Required[np.typing.NDArray[np.float64]] = field(repr=True,
-                                                            factory=lambda: np.array([],dtype=np.float64))
-    '''Frequency coordinates for the gains'''
-    params : Required[np.typing.NDArray[np.str_]] = field(repr=True,
-                                                            factory=lambda: np.array([],dtype=np.str_))
-    '''String descriptions of gain parameters. For Jones matrix vals, can be XX, XY...for parametric expressions, can be A, P, TEC...'''
-    # define data
-    gains : xr.Dataset = field(init=False)
-    '''Antenna gains stored as an xarray table, with other attributes defining coordinates or metadata.'''
-    
-     # optional metadata
-    msname : Optional[str] = field(default=None,repr=False)
+    msname:str
     '''Name of the Measurement Set associated to these gains.'''
-    comments : Optional[np.typing.NDArray[np.str_]] = field(repr=True,
-                                                            factory=lambda: np.array([],dtype='U'))
+    comments:np.ndarray[np.str_]
     '''Optional comments'''
-    ### generate the below on-the-fly?
-    # # optional coordinates
-    # gains_t0 : Optional[np.typing.NDArray[np.float64]] = field(repr=True,
-    #                                                         factory=lambda: np.array([],dtype=np.float64))
-    # '''Time-interval start for gain solutions'''
-    # gains_t1 : Optional[np.typing.NDArray[np.float64]] = field(repr=True,
-    #                                                         factory=lambda: np.array([],dtype=np.float64))
-    # '''Time-interval end for gain solutions'''
-    # gains_nu0 : Required[np.typing.NDArray[np.float64]] = field(repr=True,
-    #                                                         factory=lambda: np.array([],dtype=np.float64))
-    # '''Frequency-interval start for gain solutions'''
-    # gains_nu1 : Required[np.typing.NDArray[np.float64]] = field(repr=True,
-    #                                                         factory=lambda: np.array([],dtype=np.float64))
-    # '''Frequency-interval end for gain solutions'''
 
-
-    # this gets called automatically after __init__ runs.
-    # it is the standard way to initialise computed quantities.
-    def __attrs_post_init__(self):
-
-
+    def __init__(self,
+                 name:str,
+                 gaintype:str,
+                 antennas:np.ndarray[np.str_],
+                 times:u.Quantity,
+                 freqs:u.Quantity,
+                 params:np.ndarray[np.str_],
+                 directions:SkyCoord=None,
+                 msname:str="Undefined",
+                 comments:np.ndarray[np.str_]=np.array([])
+                 ):
+        '''
+        This class takes in the coordinate values for xJones arrays.
+        These are expected to be non-scalar astropy SkyCoords (for directions) or quantities (for all other axes).
+        It builds and returns an empty xarray.
+        '''
+        # required metadata
+        self.name = name
+        self.gaintype = gaintype
+        # optional metadata
+        self.msname = msname
+        self.comments=comments
+        # build xarray shape
+        if directions==None:
+            directions=[0]
+        xshape = (len(directions),len(antennas),len(times),len(freqs),len(params))
+        # build xarray coords
         dims=["dir",
               "antennas",
               "times",
               "freqs",
               "params"]
-        coords={"dir":self.directions,
-                "antennas":self.antennas,
-                "times":self.times,
-                "freqs":self.freqs,
-                "params":self.params
+        # check units
+        ...
+        # build dict
+        coords={"dir":directions,
+                "antennas":antennas,
+                "times":times,
+                "freqs":freqs,
+                "params":params
                 }
-#        print(len(self.directions),len(self.antennas))
-        self.gains = xr.Dataset(data = np.zeros(self.shape),
-                                dims=dims,
-                                coords=coords,
-                                name=self.name)
+        # build xarray dataarray
+        # self.gains = xr.DataArray(data = np.zeros(xshape),
+        #                           dims=dims,
+        #                           coords=coords,
+        #                           name=self.name)
+        # build xarray dataset
+        self.gains = xr.Dataset(
+                        {self.name: (dims, np.zeros(xshape, dtype=np.float32))},
+                        coords=coords
+                    )
+        ...
+
+# @define
+# class xJonesInput:
+#     # required metadata
+#     name :  Required[str] = field(repr=True)
+#     '''Name of these gains.'''
+#     gaintype : Required[str] = field(repr=True)
+#     '''Description of the gain type (eg scalar, full-jones, phase, amp...)'''
+#     # coordinate axes
+#     antennas : Required[np.typing.NDArray[np.str_]] = field(repr=lambda value: f"array({len(value)})")
+#     '''Names of the antennas associated with gains.'''
+#     times : Required[np.typing.NDArray[np.float64]] = field(repr=True)
+#     '''Time coordinates for the gains'''
+#     freqs : Required[np.typing.NDArray[np.float64]] = field(repr=True)
+#     '''Frequency coordinates for the gains'''
+#     params : Required[np.typing.NDArray[np.str_]] = field(repr=True)
+#     '''String descriptions of gain parameters. For Jones matrix vals, can be XX, XY...for parametric expressions, can be A, P, TEC...'''
+#     directions : Optional[SkyCoord] = field(default=None)
+#     '''Coordinates for direction-dependent gains. Defaults to None for direction-independent gains.'''
+#     # define data
+#     gains : xr.Dataset = field(init=False)
+#     '''Antenna gains stored as an xarray table, with other attributes defining coordinates or metadata.'''
+    
+#      # optional metadata
+#     msname : Optional[str] = field(default=None,repr=False)
+#     '''Name of the Measurement Set associated to these gains.'''
+#     comments : Optional[np.typing.NDArray[np.str_]] = field(repr=True,
+#                                                             factory=lambda: np.array([],dtype='U'))
+#     '''Optional comments'''
+#     ### generate the below on-the-fly?
+#     # # optional coordinates
+#     # gains_t0 : Optional[np.typing.NDArray[np.float64]] = field(repr=True,
+#     #                                                         factory=lambda: np.array([],dtype=np.float64))
+#     # '''Time-interval start for gain solutions'''
+#     # gains_t1 : Optional[np.typing.NDArray[np.float64]] = field(repr=True,
+#     #                                                         factory=lambda: np.array([],dtype=np.float64))
+#     # '''Time-interval end for gain solutions'''
+#     # gains_nu0 : Required[np.typing.NDArray[np.float64]] = field(repr=True,
+#     #                                                         factory=lambda: np.array([],dtype=np.float64))
+#     # '''Frequency-interval start for gain solutions'''
+#     # gains_nu1 : Required[np.typing.NDArray[np.float64]] = field(repr=True,
+#     #                                                         factory=lambda: np.array([],dtype=np.float64))
+#     # '''Frequency-interval end for gain solutions'''
+
+
+#     # this gets called automatically after __init__ runs.
+#     # it is the standard way to initialise computed quantities.
+#     def generate_gains(self) -> Gain:
+
+
+#         dims=["dir",
+#               "antennas",
+#               "times",
+#               "freqs",
+#               "params"]
+#         coords={"dir":self.directions,
+#                 "antennas":self.antennas,
+#                 "times":self.times,
+#                 "freqs":self.freqs,
+#                 "params":self.params
+#                 }
+# #        print(len(self.directions),len(self.antennas))
+#         self.gains = xr.Dataset(data = np.zeros(self.shape),
+#                                 dims=dims,
+#                                 coords=coords,
+#                                 name=self.name)
     
 
 
@@ -155,14 +149,14 @@ class xJones():
 
 
 
-        self.gains = xr.Dataset(
-            coords={
-                'antenna': self.antennas,
-                'time': self.times,
-                'freq': self.freqs,
-                'param': self.params
-            }
-        )
+#         self.gains = xr.Dataset(
+#             coords={
+#                 'antenna': self.antennas,
+#                 'time': self.times,
+#                 'freq': self.freqs,
+#                 'param': self.params
+#             }
+#         )
 
 
 
