@@ -8,6 +8,8 @@ import xarray as xr
 from attrs import define, field
 import numpy as np
 from pathlib import Path
+# for serialisation
+import json
 
 
 
@@ -268,15 +270,6 @@ class xJones:
 
 
 ################### we are here ######################
-
-
-
-
-
-
-
-
-        
 #     def to_solsnpz(self,
 #                    filename):
 #         """Write to killMS sols.npz format."""
@@ -346,3 +339,99 @@ class xJones:
 #         )
         
 #         return fname
+
+    def to_dict(self, 
+                include_data:bool=False) -> dict:
+        '''
+        Converts xJones object to a dictionary for JSON serialization.
+        
+        :param self: xJones object
+        :param include_data: set to True to include image data in the dict itself. Defaults to False
+        :type include_data: bool
+        :return: Dictionary representation current xJones object
+        :rtype: dict
+        '''
+        jones_dict = {
+            "metadata": {
+                "name": self.name,
+                "gaintype": self.gaintype,
+                "msname": self.msname,
+                "comments": self.comments.tolist(),
+            },
+            "coordinates": {},
+            "data": {},
+            "attrs": {k: str(v) for k, v in self.gains.attrs.items()}
+        }
+
+        # Serialize coordinates
+        for coord_name, coord in self.gains.coords.items():
+            if hasattr(coord, 'values'):
+                if hasattr(coord, 'unit'):
+                    jones_dict["coordinates"][coord_name] = {
+                                "values": serialize_complex(coord.values),
+                                "unit": str(coord.unit)
+                    }
+                else:
+                    jones_dict["coordinates"][coord_name] = serialize_complex(coord.values)
+            else:
+                jones_dict["coordinates"][coord_name] = str(coord)
+
+        # Serialize data variables
+        if include_data==True:
+            for var_name in self.gains.data_vars:
+                var = self.gains[var_name]
+                jones_dict["data"][var_name] = {
+                            "values": serialize_complex(var.values),
+                            "dims": list(var.dims)
+                }
+        return jones_dict
+
+
+
+
+
+
+
+
+    def to_json(self,
+                     filename: str, 
+                     include_data:bool=False,
+                     overwrite:bool=True,
+                     indent:int=2) -> None:
+        '''
+         Serialise xJones object to JSON file.
+        
+        :param self: xJones object
+        :param filename: Output filename
+        :type filename: str
+        :param include_data: include data values in JSON file. Default False.
+        :type include_data: bool
+        :param overwrite: overwrite existing file if present. Default True.
+        :type overwrite: bool
+        :param indent: JSON indentation level. Default 2.
+        :type indent: int
+        '''
+        filepath = Path(filename)
+        if filepath.exists() and not overwrite:
+            raise FileExistsError(f"File {filename} already exists. Set overwrite=True to overwrite.")
+        jones_dict = self.to_dict(include_data=include_data)
+        with open(filepath, 'w') as f:
+            json.dump(jones_dict, f, indent=indent)
+
+
+def serialize_complex(arr:np.ndarray[Any]):
+    '''
+    Splits complex numpy array to allow JSON serialisation.
+    Returns a list, split into real and imag if values are complex.
+    
+    :param arr: Numpy-like array of complex values to split
+    :type arr: np.ndarray[np.complexfloating]
+    '''
+    arr = np.asarray(arr)
+    if np.iscomplexobj(arr):
+        return {
+            "real": np.real(arr).tolist(),
+            "imag": np.imag(arr).tolist(),
+            "_complex_": True
+        }
+    return arr.tolist()

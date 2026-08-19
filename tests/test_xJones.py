@@ -160,7 +160,9 @@ def test_to_dicosols():
 
 
 def test_serialise_json():
-    ...
+    sols = "./tests/Data/killMS.CohJones.sols.npz"
+    test_xjones = xJones.from_dicosols(sols)
+    test_xjones.to_json("test.json",include_data=True)
 
 
 def from_json():
