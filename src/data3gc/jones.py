@@ -20,19 +20,19 @@ class xJones:
     '''Description of the gain type (eg scalar, full-jones, phase, amp...)'''
     msname:str
     '''Name of the Measurement Set associated to these gains.'''
-    comments:np.ndarray[np.str_]
+    comments:np.typing.NDArray[np.str_]
     '''Optional comments'''
 
     def __init__(self,
                  name:str,
                  gaintype:str,
-                 antennas:np.ndarray[np.str_],
+                 antennas:np.typing.NDArray[np.str_],
                  times:u.Quantity,
                  freqs:u.Quantity,
-                 params:np.ndarray[np.str_],
-                 directions:SkyCoord=None,
+                 params:np.typing.NDArray[np.str_],
+                 directions:Optional[np.str_] = None,
                  msname:str="Undefined",
-                 comments:np.ndarray[np.str_]=np.array([])
+                 comments:np.typing.NDArray[np.str_]=np.array([""])
                  ):
         '''
         This class takes in the coordinate values for xJones arrays.
@@ -45,30 +45,32 @@ class xJones:
         # optional metadata
         self.msname = msname
         self.comments=comments
+        # check dirs, params dimensionality
+        if np.isscalar(directions) :
+            dirs=np.array([directions])
+        else:
+            dirs=directions.to_string('hmsdms')
+        if np.isscalar(params):
+            params=np.array([params])
+        # validate times, freqs dimensionality
+        times = self.validate_axis(times, 'time', u.s)
+        freqs = self.validate_axis(freqs, 'frequency', u.Hz)
         # build xarray shape
-        if directions==None:
-            directions=[None]
-        xshape = (len(directions),len(antennas),len(times),len(freqs),len(params))
+        xshape = (len(dirs),len(antennas),len(times),len(freqs),len(params))
+        print(xshape)
         # build xarray coords
-        dims=["dir",
-              "antennas",
-              "times",
-              "freqs",
-              "params"]
-        # check units
-        ...
+        dims=["Direction",
+              "Antennas",
+              "Times",
+              "Freqs",
+              "Params"]
         # build dict
-        coords={"dir":directions,
-                "antennas":antennas,
-                "times":times,
-                "freqs":freqs,
-                "params":params
+        coords={"Direction":dirs,
+                "Antennas":antennas,
+                "Times":times,
+                "Freqs":freqs,
+                "Params":params
                 }
-        # build xarray dataarray
-        # self.gains = xr.DataArray(data = np.zeros(xshape),
-        #                           dims=dims,
-        #                           coords=coords,
-        #                           name=self.name)
         # build xarray dataset
         self.gains = xr.Dataset(
                         {self.name: (dims, np.zeros(xshape, dtype=np.float32))},
@@ -78,93 +80,33 @@ class xJones:
                                    comments=comments),
                     )
     
-    def __repr__(self):
+    def __repr__(self) -> str:
         '''Return the underlying xarray dataset representation'''
         return self.gains.__repr__()
 
-# @define
-# class xJonesInput:
-#     # required metadata
-#     name :  Required[str] = field(repr=True)
-#     '''Name of these gains.'''
-#     gaintype : Required[str] = field(repr=True)
-#     '''Description of the gain type (eg scalar, full-jones, phase, amp...)'''
-#     # coordinate axes
-#     antennas : Required[np.typing.NDArray[np.str_]] = field(repr=lambda value: f"array({len(value)})")
-#     '''Names of the antennas associated with gains.'''
-#     times : Required[np.typing.NDArray[np.float64]] = field(repr=True)
-#     '''Time coordinates for the gains'''
-#     freqs : Required[np.typing.NDArray[np.float64]] = field(repr=True)
-#     '''Frequency coordinates for the gains'''
-#     params : Required[np.typing.NDArray[np.str_]] = field(repr=True)
-#     '''String descriptions of gain parameters. For Jones matrix vals, can be XX, XY...for parametric expressions, can be A, P, TEC...'''
-#     directions : Optional[SkyCoord] = field(default=None)
-#     '''Coordinates for direction-dependent gains. Defaults to None for direction-independent gains.'''
-#     # define data
-#     gains : xr.Dataset = field(init=False)
-#     '''Antenna gains stored as an xarray table, with other attributes defining coordinates or metadata.'''
-    
-#      # optional metadata
-#     msname : Optional[str] = field(default=None,repr=False)
-#     '''Name of the Measurement Set associated to these gains.'''
-#     comments : Optional[np.typing.NDArray[np.str_]] = field(repr=True,
-#                                                             factory=lambda: np.array([],dtype='U'))
-#     '''Optional comments'''
-#     ### generate the below on-the-fly?
-#     # # optional coordinates
-#     # gains_t0 : Optional[np.typing.NDArray[np.float64]] = field(repr=True,
-#     #                                                         factory=lambda: np.array([],dtype=np.float64))
-#     # '''Time-interval start for gain solutions'''
-#     # gains_t1 : Optional[np.typing.NDArray[np.float64]] = field(repr=True,
-#     #                                                         factory=lambda: np.array([],dtype=np.float64))
-#     # '''Time-interval end for gain solutions'''
-#     # gains_nu0 : Required[np.typing.NDArray[np.float64]] = field(repr=True,
-#     #                                                         factory=lambda: np.array([],dtype=np.float64))
-#     # '''Frequency-interval start for gain solutions'''
-#     # gains_nu1 : Required[np.typing.NDArray[np.float64]] = field(repr=True,
-#     #                                                         factory=lambda: np.array([],dtype=np.float64))
-#     # '''Frequency-interval end for gain solutions'''
-
-
-#     # this gets called automatically after __init__ runs.
-#     # it is the standard way to initialise computed quantities.
-#     def generate_gains(self) -> Gain:
-
-
-#         dims=["dir",
-#               "antennas",
-#               "times",
-#               "freqs",
-#               "params"]
-#         coords={"dir":self.directions,
-#                 "antennas":self.antennas,
-#                 "times":self.times,
-#                 "freqs":self.freqs,
-#                 "params":self.params
-#                 }
-# #        print(len(self.directions),len(self.antennas))
-#         self.gains = xr.Dataset(data = np.zeros(self.shape),
-#                                 dims=dims,
-#                                 coords=coords,
-#                                 name=self.name)
-    
-
-
-
-
-
-
-
-#         self.gains = xr.Dataset(
-#             coords={
-#                 'antenna': self.antennas,
-#                 'time': self.times,
-#                 'freq': self.freqs,
-#                 'param': self.params
-#             }
-#         )
-
-
+    def validate_axis(self,
+                      input_var,
+                      desired_physical_type,
+                      default_unit):
+        # since u.Quantity doesn't say if it's scalar or array, check that first.
+        if isinstance(input_var,u.Quantity):
+            # check if it is scalar or vector
+            if input_var.isscalar:
+                input_var = np.array([input_var])
+            # check if it has correct unit physical type
+            if input_var.unit.physical_type != desired_physical_type:
+                input_var << default_unit
+            # if it does, cast to default unit (e.g. seconds rather than minutes)
+            input_var = input_var.to(default_unit)
+        else:
+            # if it is not a quantity, make it into an array if it is not already
+            if np.isscalar(input_var):
+                input_var=np.array([input_var])
+            elif not isinstance(array, np.ndarray):
+                input_var=np.asarray(input_var)
+            # not a quantity to begin with; just add requested units
+            input_var = input_var << default_unit
+        return input_var
 
 
 ################### we are here ######################
