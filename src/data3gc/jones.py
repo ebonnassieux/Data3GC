@@ -203,7 +203,7 @@ class xJones:
         freqs_center = np.mean(freqs, axis=1)
         gains_nu0 = validate_axis(freqs[:, 0],'freq',u.Hz)
         gains_nu1 = validate_axis(freqs[:, 1],'freq',u.Hz)
-        # extract param intervals. TODO
+        ### read gains and stats
         gains = sols_struct['G']
         stats = sols_struct['Stats']        
         ### Reshape gain, stats values
@@ -220,7 +220,7 @@ class xJones:
         
         # Set defaults for optional fields
         name = Path(filename).stem
-        comments = np.array([f"Gains loaded from dicosols {name}."])
+        comments = np.array([f"Gains loaded from dicosol {filename}."])
         # do not specify solve mode, because it is not inferred.
         # DicoSols are always 2,2 Jones matrices, even when solved in Scalar or IDiag.
         gaintype="JonesMatrix" 
@@ -265,6 +265,10 @@ class xJones:
         # add dicosols-specific metadata
         output.add_attr("t0",msname_time0)
         output.add_attr("BeamTimes",beam_times)
+        output.add_attr("SkyModel",data["SkyModel"]) # TODO: make this into a nice dataset.
+        output.add_attr("ClusterCat",data["ClusterCat"]) # TODO: make this into a nice dataset.
+        output.add_attr("SourceCatSub",data["SourceCatSub"]) # TODO: make this into a nice dataset.
+        output.add_attr("ModelName",data["ModelName"])
 
         return output
 
