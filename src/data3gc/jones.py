@@ -204,15 +204,13 @@ class xJones:
         gains_nu0 = validate_axis(freqs[:, 0],'freq',u.Hz)
         gains_nu1 = validate_axis(freqs[:, 1],'freq',u.Hz)
         # extract param intervals. TODO
-        ...
-
-        
-        # Extract gain values
+        gains = sols_struct['G']
+        stats = sols_struct['Stats']        
+        ### Reshape gain, stats values
         # Sols has fields: t0, t1, G, Stats
         # t0 and t1 are scalar floats for each time slot
-        # G has shape (1, n_antennas, 1, 2, 2) - complex64 Jones matrices
-        # G has shape (1, n_antennas, 1, 2, 2) per time slot
-        # We want shape (n_times, n_antennas, 2, 2)
+        # G has shape (n_freqs, n_antennas, n_dirs, 2, 2)  per time slot
+        # We want shape (n_dirs, n_times, n_freqs, n_antennas, n_params)
         gains_list = []
         for s in sols_struct:
             g = s['G'][0]  # shape (n_antennas, 1, 2, 2)
@@ -223,9 +221,12 @@ class xJones:
         # Set defaults for optional fields
         name = Path(filename).stem
         comments = np.array([f"Gains loaded from dicosols {name}."])
-
-        gaintype="TODO"
-        params=np.array(["TODO"])
+        # do not specify solve mode, because it is not inferred.
+        # DicoSols are always 2,2 Jones matrices, even when solved in Scalar or IDiag.
+        gaintype="JonesMatrix" 
+        # There does not seem to be metadata recording the correlator basis.
+        # I guess, for now, let's assume it's XY, since it's LOFAR software.
+        params=np.array(["XX","XY","YX","YY"])
         
         
         # Create initial xjonesinstance with attrs
@@ -238,6 +239,9 @@ class xJones:
                     params=params,
                     msname=msname,
                     comments=comments)
+        
+        # add stats xr.DataArray to dataset
+        ...
         
         # add dicosols-specific axes and coords
         output.add_coords("gains_t0",
