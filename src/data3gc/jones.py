@@ -1,6 +1,6 @@
 # Defines Jones object properties.
 from __future__ import annotations
-from typing import TypedDict, Required, Optional, NotRequired, Protocol, Self, cast
+from typing import Any, Optional, NotRequired, Protocol, Self, cast
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 import numpy.typing
@@ -9,6 +9,46 @@ from attrs import define, field
 import numpy as np
 from pathlib import Path
 
+
+
+def validate_axis(input_var,
+                    desired_physical_type:str,
+                    output_unit:u.Unit|u.IrreducibleUnit) -> u.Quantity:
+    '''
+    Function to take in sloppy inputs for xjones coordinate axes
+    and reformat them to build nice xarray coordinates.
+    
+    :param input_var: coord value or array 
+    :param desired_physical_type: physical type for this axis, such as time, frequency, Stokes...
+    :type desired_physical_type: str
+    :param output_unit: Fundamental unit to return the coord in, such as s, Hz...
+    :type output_unit: u.Unit | u.IrreducibleUnit
+    :return: Outputs a reformatted astropy Unit array using the provided values and requested units.
+    :rtype: Quantity
+    '''
+    # since u.Quantity doesn't say if it's scalar or array, check that first.
+    if isinstance(input_var,u.Quantity):
+        output_var = cast(u.Quantity, input_var) # inform pylance
+        # check if it is scalar or vector
+        if output_var.isscalar:
+            output_var = cast(u.Quantity,np.array([output_var]))
+        # check if it has correct unit physical type
+        if isinstance(output_var, u.Quantity) \
+            and output_var.unit is not None \
+                and output_var.unit.physical_type != desired_physical_type:
+            output_var = output_var << output_unit
+        # if it does, cast to default unit (e.g. seconds rather than minutes)
+        output_var = input_var.to(output_unit)
+    else:
+        output_var=cast(np.ndarray,input_var) # check this works. pylance complains less at least.
+        # if it is not a quantity, make it into an array if it is not already
+        if np.isscalar(input_var):
+            output_var=np.array([input_var])
+        elif not isinstance(input_var, np.ndarray):
+            output_var=np.asarray(input_var)
+        # not a quantity to begin with; just add requested units
+        output_var = cast(u.Quantity, output_var << output_unit)
+    return output_var
 
 @define
 class xJones:
@@ -30,7 +70,7 @@ class xJones:
                  times:u.Quantity,
                  freqs:u.Quantity,
                  params:np.typing.NDArray[np.str_],
-                 directions:Optional[np.str_] = None,
+                 directions:Optional[Any] = None,
                  msname:str="Undefined",
                  comments:np.typing.NDArray[np.str_]=np.array([""])
                  ):
@@ -83,32 +123,6 @@ class xJones:
     def __repr__(self) -> str:
         '''Return the underlying xarray dataset representation'''
         return self.gains.__repr__()
-
-def validate_axis(input_var,
-                    desired_physical_type:str,
-                    output_unit:u.Unit|u.IrreducibleUnit) -> u.Quantity:
-    # since u.Quantity doesn't say if it's scalar or array, check that first.
-    if isinstance(input_var,u.Quantity):
-        output_var = cast(u.Quantity, input_var) # inform pylance
-        # check if it is scalar or vector
-        if output_var.isscalar:
-            output_var = cast(u.Quantity,np.array([output_var]))
-        # check if it has correct unit physical type
-        if output_var.unit.physical_type != desired_physical_type:
-            output_var = output_var << output_unit
-        # if it does, cast to default unit (e.g. seconds rather than minutes)
-        output_var = input_var.to(output_unit)
-    else:
-        output_var=cast(np.ndarray,input_var) # check this works. pylance complains less at least.
-        # if it is not a quantity, make it into an array if it is not already
-        if np.isscalar(input_var):
-            output_var=np.array([input_var])
-        elif not isinstance(input_var, np.ndarray):
-            output_var=np.asarray(input_var)
-        # not a quantity to begin with; just add requested units
-        output_var = cast(u.Quantity, output_var << output_unit)
-    return output_var
-
 
 ################### we are here ######################
 
