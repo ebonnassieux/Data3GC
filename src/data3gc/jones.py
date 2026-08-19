@@ -88,19 +88,20 @@ class xJones:
     def validate_axis(self,
                       input_var,
                       desired_physical_type:str,
-                      default_unit:u.Unit) -> u.Quantity:
+                      default_unit:u.Unit|u.IrreducibleUnit) -> u.Quantity:
         # since u.Quantity doesn't say if it's scalar or array, check that first.
         if isinstance(input_var,u.Quantity):
             output_var = cast(u.Quantity, input_var) # inform pylance
             # check if it is scalar or vector
             if output_var.isscalar:
-                output_var = np.array([output_var])
+                output_var = cast(u.Quantity,np.array([output_var]))
             # check if it has correct unit physical type
             if output_var.unit.physical_type != desired_physical_type:
-                output_var << default_unit
+                output_var = output_var << default_unit
             # if it does, cast to default unit (e.g. seconds rather than minutes)
             output_var = input_var.to(default_unit)
         else:
+            output_var=cast(np.ndarray,input_var) # check this works. pylance complains less at least.
             # if it is not a quantity, make it into an array if it is not already
             if np.isscalar(input_var):
                 output_var=np.array([input_var])
