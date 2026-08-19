@@ -46,9 +46,10 @@ class xJones:
         self.msname = msname
         self.comments=comments
         # check dirs, params dimensionality
-        if np.isscalar(directions) :
+        if np.isscalar(directions) or directions==None:
             dirs=np.array([directions])
-            dirs = cast(np.ndarray,dirs)
+        else:
+            dirs=directions
             # cast(u.Quantity, input_var)
         if np.isscalar(params):
             params=np.array([params])
