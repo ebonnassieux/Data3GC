@@ -184,7 +184,7 @@ class xJones:
         sols_struct = data['Sols']
         ### axes information
         # build dummy direction information, as pointings are not contained in dicosols afaik
-        ndir = sols_struct.shape[0]
+        ndir = sols_struct['G'].shape[3] ### NOT!!! SHAPE 0 !!!! for ease of application, I suspect
         directions=[]
         for i in range(ndir):
             directions.append(f"dir{i:02d}")
@@ -212,14 +212,21 @@ class xJones:
         # G has shape (n_freqs, n_antennas, n_dirs, 2, 2)  per time slot
         # We want shape (n_dirs, n_times, n_freqs, n_antennas, n_params)
         gains_list = []
+        stats_list = []
         for s in sols_struct:
-            g = s['G'][0]  # shape (n_antennas, 1, 2, 2)
-            g = g[:, 0, :, :]  # shape (n_antennas, 2, 2)
-            gains_list.append(g)
-        gains = np.stack(gains_list, axis=0)  # shape (n_times, n_antennas, 2, 2)
+            gains = s['G']     # shape (n_freqs, n_antennas, n_dirs, 2, 2)
+            stats = s['Stats'] # shape (n_freqs, n_antennas, n_dirs, 2, 2)
+            gains_list.append(gains)
+            stats_list.append(stats)
+        gains = np.array(gains_list) # shape (n_times, n_freqs, n_ants, n_dirs, 2,2 )
+        stats = np.array(stats_list) # shape (n_times, n_freqs, n_ants, 4 )
+        # reshape to xarray style
+        gains = gains.transpose(3, 2, 0, 1, 4, 5).reshape(len(directions), len(station_names), len(times), len(freqs), 4)
+        stats = stats.transpose(2, 0, 1, 3) # (len(station_names), len(times), len(freqs), 4)
+        print(stats.shape)
         
         # Set defaults for optional fields
-        name = Path(filename).stem
+        name = Path(filename).stem.replace("killMS.","").replace(".sols","")
         comments = np.array([f"Gains loaded from dicosol {filename}."])
         # do not specify solve mode, because it is not inferred.
         # DicoSols are always 2,2 Jones matrices, even when solved in Scalar or IDiag.
@@ -239,28 +246,13 @@ class xJones:
                     params=params,
                     msname=msname,
                     comments=comments)
-        
-        # add stats xr.DataArray to dataset
-        ...
-        
-        # add dicosols-specific axes and coords
-        output.add_coords("gains_t0",
-                           gains_t0,
-                           physical_type='time',
-                           unit=u.s)
-        output.add_coords("gains_t1",
-                           gains_t1,
-                           physical_type='time',
-                           unit=u.s)
-        output.add_coords("gains_nu0",
-                           gains_nu0,
-                           physical_type='freq',
-                           unit=u.Hz)
-        
-        output.add_coords("gains_nu1",
-                           gains_nu1,
-                           physical_type='freq',
-                           unit=u.Hz)
+        # assign dicosols-specific coordinates the times and freq axes
+        output.gains = output.gains.assign_coords({
+                                                "gains_t0": ("Times", gains_t0),
+                                                "gains_t1": ("Times", gains_t1),
+                                                "gains_nu0": ("Freqs", gains_nu0),
+                                                "gains_nu1": ("Freqs", gains_nu1)
+                                                })
         
         # add dicosols-specific metadata
         output.add_attr("t0",msname_time0)
@@ -269,6 +261,13 @@ class xJones:
         output.add_attr("ClusterCat",data["ClusterCat"]) # TODO: make this into a nice dataset.
         output.add_attr("SourceCatSub",data["SourceCatSub"]) # TODO: make this into a nice dataset.
         output.add_attr("ModelName",data["ModelName"])
+
+
+        # remove the default empty dataarray, unused here
+        del(output.gains[name])
+        # save the gains and stats in the dataset
+        output.gains[name+"_gains"] = (("Direction", "Antennas", "Times", "Freqs", "Params"), gains)
+        output.gains[name+"_stats"] = (("Antennas", "Times", "Freqs", "Params"), stats)
 
         return output
 
