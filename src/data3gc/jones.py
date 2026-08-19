@@ -40,7 +40,7 @@ def validate_axis(input_var,
         # if it does, cast to default unit (e.g. seconds rather than minutes)
         output_var = input_var.to(output_unit)
     else:
-        output_var=cast(np.ndarray,input_var) # check this works. pylance complains less at least.
+        output_var=np.asarray(input_var) # check this works. pylance complains less at least.
         # if it is not a quantity, make it into an array if it is not already
         if np.isscalar(input_var):
             output_var=np.array([input_var])
@@ -154,81 +154,98 @@ class xJones:
         self.gains=self.gains.drop_dims(coordname)
 
 
-#     @classmethod
-#     def from_dicosols(cls,
-#                      filename:Path):
-#         """Read a killMS .sols.npz file and create an xSols object."""
-#         fname = Path(filename).absolute().as_posix()
-#         data = np.load(fname, allow_pickle=True)
+    @classmethod
+    def from_dicosols(cls,
+                     filename:str):
+        """Read a killMS .sols.npz file and create an xSols object."""
+        ### load dicosols object
+        fname = Path(filename).absolute().as_posix()
+        data = np.load(fname, allow_pickle=True)
+        ### extract dicosols metadata
+        # xsols metadata
+        msname = str(data['MSName'])
+        # new metadata items. add to xjones metadata in post.
+        msname_time0 = float(data['MSNameTime0']) 
+        beam_times = data['BeamTimes']
+        ### extra dicosols data
+        sols_struct = data['Sols']
+        # Sols has fields: t0, t1, G, Stats
+        # t0 and t1 are scalar floats for each time slot
+        # G has shape (1, n_antennas, 1, 2, 2) - complex64 Jones matrices
+        ### axes information
+        # build dummy direction information, as pointings are not contained in dicosols afaik
+        ndir = sols_struct.shape[0]
+        directions=[]
+        for i in range(ndir):
+            directions.append(f"dir{i:02d}")
+        directions=np.array(directions)
+        # extract antenna information.
+        station_names = np.array(data['StationNames'],dtype=np.str_)
+        ### time
+        # Extract time intervals (t0 and t1 are scalars in the structured array)
+        gains_t0 = validate_axis(np.array([float(s['t0']) for s in sols_struct]),'time',u.s)
+        gains_t1 = validate_axis(np.array([float(s['t1']) for s in sols_struct]),'time',u.s)
+        # assume timestamps are halfway between t0 and t1 values.
+        times = validate_axis(0.5 * (gains_t0 + gains_t1),'time',u.s)
+        ### freq
+        freqs = validate_axis(np.array(data['FreqDomains']),'freq',u.Hz)
+        # extract freq intervals
+        freqs_center = np.mean(freqs, axis=1)
+        gains_nu0 = validate_axis(freqs[:, 0],'freq',u.Hz)
+        gains_nu1 = validate_axis(freqs[:, 1],'freq',u.Hz)
+        # extract param intervals. TODO
+        ...
+
         
-#         # Extract metadata
-#         msname = str(data['MSName'])
-#         msname_time0 = float(data['MSNameTime0'])
-#         station_names = data['StationNames']
-#         freqs = data['FreqDomains']
-#         beam_times = data['BeamTimes']
+        # Extract gain values
+        # G has shape (1, n_antennas, 1, 2, 2) per time slot
+        # We want shape (n_times, n_antennas, 2, 2)
+        gains_list = []
+        for s in sols_struct:
+            g = s['G'][0]  # shape (n_antennas, 1, 2, 2)
+            g = g[:, 0, :, :]  # shape (n_antennas, 2, 2)
+            gains_list.append(g)
+        gains = np.stack(gains_list, axis=0)  # shape (n_times, n_antennas, 2, 2)
         
-#         # Extract solution data
-#         sols_struct = data['Sols']
+        # Set defaults for optional fields
+        name = Path(filename).stem
+        comments = np.array([f"Gains loaded from dicosols {name}."])
+
+        gaintype="TODO"
+        params=np.array(["TODO"])
         
-#         # Parse the structured array
-#         # Sols has fields: t0, t1, G, Stats
-#         # t0 and t1 are scalar floats for each time slot
-#         # G has shape (1, n_antennas, 1, 2, 2) - complex64 Jones matrices
         
-#         n_times = len(sols_struct)
-#         n_antennas = len(station_names)
+        # Create iitial xjonesinstance with attrs
+        output = cls(name=name,
+                    gaintype=gaintype,
+                    directions=directions,
+                    antennas=station_names,
+                    times=times,
+                    freqs=freqs_center,
+                    params=params,
+                    msname=msname,
+                    comments=comments)
         
-#         # Extract time intervals (t0 and t1 are scalars in the structured array)
-#         gains_t0 = np.array([float(s['t0']) for s in sols_struct])
-#         gains_t1 = np.array([float(s['t1']) for s in sols_struct])
+        # add dicosols-specific axes and coords
+        output.add_coords("gains_t0",
+                           gains_t0,
+                           physical_type='time',
+                           unit=u.s)
+        output.add_coords("gains_t1",
+                           gains_t1,
+                           physical_type='time',
+                           unit=u.s)
+        output.add_coords("gains_nu0",
+                           gains_nu0,
+                           physical_type='freq',
+                           unit=u.Hz)
         
-#         # Extract gain values
-#         # G has shape (1, n_antennas, 1, 2, 2) per time slot
-#         # We want shape (n_times, n_antennas, 2, 2)
-#         gains_list = []
-#         for s in sols_struct:
-#             g = s['G'][0]  # shape (n_antennas, 1, 2, 2)
-#             g = g[:, 0, :, :]  # shape (n_antennas, 2, 2)
-#             gains_list.append(g)
-#         gains = np.stack(gains_list, axis=0)  # shape (n_times, n_antennas, 2, 2)
-        
-#         # For times coordinate, use midpoint of intervals
-#         times = (gains_t0 + gains_t1) / 2
-        
-#         # For freqs, use midpoint of frequency domains
-#         # freqs shape is (n_freq_domains, 2)
-#         freqs_center = np.mean(freqs, axis=1)
-        
-#         # Set defaults for optional fields
-# #        directions = None  # Direction-independent gains for now
-#         name = Path(filename).stem
-#         comments = ""
-        
-#         # Add frequency interval info if available
-#         if freqs.shape[1] == 2:
-#             gains_nu0 = freqs[:, 0]
-#             gains_nu1 = freqs[:, 1]
-#         else:
-#             gains_nu0 = freqs_center
-#             gains_nu1 = freqs_center
-        
-#         # Create xSols instance with attrs
-#         return cls(
-#             name=name,
-#             msname=msname,
-#             comments=comments,
-#             gaintype="full-jones",
-# #            directions=directions,
-#             antennas=station_names,
-#             times=times,
-#             gains_t0=gains_t0,
-#             gains_t1=gains_t1,
-#             freqs=freqs_center,
-#             gains_nu0=gains_nu0,
-#             gains_nu1=gains_nu1,
-#             gains=gains,
-#         )
+        output.add_coords("gains_nu1",
+                           gains_nu1,
+                           physical_type='freq',
+                           unit=u.Hz)
+
+        return output
 
 
 

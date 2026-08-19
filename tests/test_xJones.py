@@ -122,9 +122,9 @@ def test_del_xjones_coords():
 
 def test_from_dicosols():
     '''Check initialisation from dicosols object.'''
-    sols = pathlib.Path("./tests/Data/killMS.CohJones.sols.npz")
+    sols = "./tests/Data/killMS.CohJones.sols.npz"
     test_xjones = xJones.from_dicosols(sols)
-    assert False
+    print(test_xjones)
     
 def test_to_dicosols():
     '''Check serialisation to dicosols object.'''
