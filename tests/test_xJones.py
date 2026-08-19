@@ -153,7 +153,6 @@ def test_from_dicosols():
     '''Check initialisation from dicosols object.'''
     sols = "./tests/Data/killMS.CohJones.sols.npz"
     test_xjones = xJones.from_dicosols(sols)
-    print(test_xjones)
     
 def test_to_dicosols():
     '''Check serialisation to dicosols object.'''

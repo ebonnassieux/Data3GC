@@ -223,8 +223,6 @@ class xJones:
         # reshape to xarray style
         gains = gains.transpose(3, 2, 0, 1, 4, 5).reshape(len(directions), len(station_names), len(times), len(freqs), 4)
         stats = stats.transpose(2, 0, 1, 3) # (len(station_names), len(times), len(freqs), 4)
-        print(stats.shape)
-        
         # Set defaults for optional fields
         name = Path(filename).stem.replace("killMS.","").replace(".sols","")
         comments = np.array([f"Gains loaded from dicosol {filename}."])
@@ -234,8 +232,6 @@ class xJones:
         # There does not seem to be metadata recording the correlator basis.
         # I guess, for now, let's assume it's XY, since it's LOFAR software.
         params=np.array(["XX","XY","YX","YY"])
-        
-        
         # Create initial xjonesinstance with attrs
         output = cls(name=name,
                     gaintype=gaintype,
@@ -253,17 +249,15 @@ class xJones:
                                                 "gains_nu0": ("Freqs", gains_nu0),
                                                 "gains_nu1": ("Freqs", gains_nu1)
                                                 })
-        
         # add dicosols-specific metadata
         output.add_attr("t0",msname_time0)
         output.add_attr("BeamTimes",beam_times)
+        ### TODO: the three below will require making a nice SkyModel dataset.
         output.add_attr("SkyModel",data["SkyModel"]) # TODO: make this into a nice dataset.
         output.add_attr("ClusterCat",data["ClusterCat"]) # TODO: make this into a nice dataset.
         output.add_attr("SourceCatSub",data["SourceCatSub"]) # TODO: make this into a nice dataset.
         output.add_attr("ModelName",data["ModelName"])
-
-
-        # remove the default empty dataarray, unused here
+        # remove the default empty DataArray, unused here
         del(output.gains[name])
         # save the gains and stats in the dataset
         output.gains[name+"_gains"] = (("Direction", "Antennas", "Times", "Freqs", "Params"), gains)
