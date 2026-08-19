@@ -153,6 +153,19 @@ class xJones:
         '''
         self.gains=self.gains.drop_dims(coordname)
 
+    def add_attr(self,
+                 attrname:str,
+                 attrvals:Any,
+                 ) -> None:
+        self.gains = self.gains.assign_attrs({attrname:attrvals})
+
+    def del_attr(self,
+                 attrname:str) -> None:
+        attrs = self.gains.attrs
+        del attrs[attrname]
+        self.gains = self.gains.assign_attrs(attrs)
+
+
 
     @classmethod
     def from_dicosols(cls,
@@ -169,9 +182,6 @@ class xJones:
         beam_times = data['BeamTimes']
         ### extra dicosols data
         sols_struct = data['Sols']
-        # Sols has fields: t0, t1, G, Stats
-        # t0 and t1 are scalar floats for each time slot
-        # G has shape (1, n_antennas, 1, 2, 2) - complex64 Jones matrices
         ### axes information
         # build dummy direction information, as pointings are not contained in dicosols afaik
         ndir = sols_struct.shape[0]
@@ -198,6 +208,9 @@ class xJones:
 
         
         # Extract gain values
+        # Sols has fields: t0, t1, G, Stats
+        # t0 and t1 are scalar floats for each time slot
+        # G has shape (1, n_antennas, 1, 2, 2) - complex64 Jones matrices
         # G has shape (1, n_antennas, 1, 2, 2) per time slot
         # We want shape (n_times, n_antennas, 2, 2)
         gains_list = []
@@ -215,7 +228,7 @@ class xJones:
         params=np.array(["TODO"])
         
         
-        # Create iitial xjonesinstance with attrs
+        # Create initial xjonesinstance with attrs
         output = cls(name=name,
                     gaintype=gaintype,
                     directions=directions,
@@ -244,6 +257,10 @@ class xJones:
                            gains_nu1,
                            physical_type='freq',
                            unit=u.Hz)
+        
+        # add dicosols-specific metadata
+        output.add_attr("t0",msname_time0)
+        output.add_attr("BeamTimes",beam_times)
 
         return output
 

@@ -118,8 +118,37 @@ def test_del_xjones_coords():
     )
     test_xjones.del_coords("Freqs")
     assert "Freqs" not in test_xjones.gains._coord_names
-    
 
+def test_add_xjones_attr():
+    '''Check function to add requested attribute from xjones dataset.'''
+    test_xjones = xJones(name='test_gain',
+                         gaintype='scalar',
+                         antennas=np.array(["CS000",
+                                            "CS001"]),
+                         times=np.arange(10)*u.s,
+                         freqs=(np.arange(10)*1e6+120e6)<<u.Hz,
+                         params=np.array(["I"]),
+                         msname="some_msfile.ms",
+                         comments=np.array(["test adding a coordinate axis"])
+    )
+    test_xjones.add_attr("test_attr","OK")
+    assert "test_attr" in test_xjones.gains.attrs
+
+def test_del_xjones_attr():
+    '''Check function to remove requested attribute from xjones dataset.'''
+    test_xjones = xJones(name='test_gain',
+                         gaintype='scalar',
+                         antennas=np.array(["CS000",
+                                            "CS001"]),
+                         times=np.arange(10)*u.s,
+                         freqs=(np.arange(10)*1e6+120e6)<<u.Hz,
+                         params=np.array(["I"]),
+                         msname="some_msfile.ms",
+                         comments=np.array(["test adding a coordinate axis"])
+    )
+    test_xjones.del_attr("msname")
+    assert "msname" not in test_xjones.gains.attrs
+    
 def test_from_dicosols():
     '''Check initialisation from dicosols object.'''
     sols = "./tests/Data/killMS.CohJones.sols.npz"
