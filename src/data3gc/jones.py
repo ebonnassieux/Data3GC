@@ -86,7 +86,7 @@ class xJones:
         self.msname = msname
         self.comments=comments
         # check dirs, params dimensionality
-        if np.isscalar(directions) or directions==None:
+        if np.isscalar(directions) or directions is None:
             dirs=np.array([directions])
         else:
             dirs=directions
@@ -124,19 +124,39 @@ class xJones:
         '''Return the underlying xarray dataset representation'''
         return self.gains.__repr__()
 
-################### we are here ######################
+
+    def add_coords(self,
+                   coordname:str,
+                   coordvals:u.Quantity,
+                   physical_type:str,
+                   unit:u.Unit|u.IrreducibleUnit) -> None:
+        '''
+        Add coordinate axis specified by coordname with coordvals values. 
+        :param self: xJones object
+        :param coordname: Name of new coordinate axis
+        :type coordname: str
+        :param coordvals: Values of new coordinates in axis
+        :type coordvals: u.Quantity
+        '''
+        self.gains = self.gains.assign_coords({coordname:validate_axis(coordvals,
+                                                                       physical_type,
+                                                                       unit)})
 
 
-
-
-
-
-
+    def del_coords(self, coordname:str) -> None:
+        '''
+        Remove coordinate axis specified by coordname.
+        
+        :param self: xJones object
+        :param coordname: name of coordinate axis to remove
+        :type coordname: str
+        '''
+        self.gains=self.gains.drop_dims(coordname)
 
 
 #     @classmethod
-#     def from_solsnpz(cls,
-#                      filename):
+#     def from_dicosols(cls,
+#                      filename:Path):
 #         """Read a killMS .sols.npz file and create an xSols object."""
 #         fname = Path(filename).absolute().as_posix()
 #         data = np.load(fname, allow_pickle=True)
@@ -209,6 +229,18 @@ class xJones:
 #             gains_nu1=gains_nu1,
 #             gains=gains,
 #         )
+
+
+
+################### we are here ######################
+
+
+
+
+
+
+
+
         
 #     def to_solsnpz(self,
 #                    filename):
