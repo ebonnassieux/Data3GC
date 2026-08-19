@@ -1,6 +1,6 @@
 # Defines Jones object properties.
 from __future__ import annotations
-from typing import TypedDict, Required, Optional, NotRequired, Protocol, Self
+from typing import TypedDict, Required, Optional, NotRequired, Protocol, Self, cast
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 import numpy.typing
@@ -48,8 +48,8 @@ class xJones:
         # check dirs, params dimensionality
         if np.isscalar(directions) :
             dirs=np.array([directions])
-        else:
-            dirs=directions.to_string('hmsdms')
+            dirs = cast(np.ndarray,dirs)
+            # cast(u.Quantity, input_var)
         if np.isscalar(params):
             params=np.array([params])
         # validate times, freqs dimensionality
@@ -86,27 +86,28 @@ class xJones:
 
     def validate_axis(self,
                       input_var,
-                      desired_physical_type,
-                      default_unit):
+                      desired_physical_type:str,
+                      default_unit:u.Unit) -> u.Quantity:
         # since u.Quantity doesn't say if it's scalar or array, check that first.
         if isinstance(input_var,u.Quantity):
+            output_var = cast(u.Quantity, input_var) # inform pylance
             # check if it is scalar or vector
-            if input_var.isscalar:
-                input_var = np.array([input_var])
+            if output_var.isscalar:
+                output_var = np.array([output_var])
             # check if it has correct unit physical type
-            if input_var.unit.physical_type != desired_physical_type:
-                input_var << default_unit
+            if output_var.unit.physical_type != desired_physical_type:
+                output_var << default_unit
             # if it does, cast to default unit (e.g. seconds rather than minutes)
-            input_var = input_var.to(default_unit)
+            output_var = input_var.to(default_unit)
         else:
             # if it is not a quantity, make it into an array if it is not already
             if np.isscalar(input_var):
-                input_var=np.array([input_var])
-            elif not isinstance(array, np.ndarray):
-                input_var=np.asarray(input_var)
+                output_var=np.array([input_var])
+            elif not isinstance(input_var, np.ndarray):
+                output_var=np.asarray(input_var)
             # not a quantity to begin with; just add requested units
-            input_var = input_var << default_unit
-        return input_var
+            output_var = cast(u.Quantity, output_var << default_unit)
+        return output_var
 
 
 ################### we are here ######################
