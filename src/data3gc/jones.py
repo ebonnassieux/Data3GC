@@ -379,18 +379,18 @@ class xJones:
         # target gain shape in the dicosols:
         # times, freqs, ants, dir, 2,2
         G = self.gains[self.name+"_gains"].transpose('Times', 'Freqs','Antennas','Direction','Params').values.reshape(ntimes,nfreqs,nants,ndir,2,2)
-        # now that they're almost in good shape, split that shit along time axis
-        print()
-        print()
-        print()
-        print(G.shape)
-        print(Stats.shape)
-        print()
-        print()
-        print()
-
-
-        Sols=np.ndarray((t0, t1, G, Stats))
+        # build the dicosols Sol structure
+        sol_dtype = np.dtype([
+                            ('t0', np.float64),
+                            ('t1', np.float64),
+                            ('G', np.complex64, (nfreqs, nants, ndir, 2, 2)),
+                            ('Stats', np.float32, (nfreqs, nants, 4))
+                            ])
+        # build the Sols key
+        Sols = np.array(
+                        [(t0[i], t1[i], G[i], Stats[i]) for i in range(ntimes)],
+                        dtype=sol_dtype
+                        )
         # station names
         ## get from attributes
         StationNames=self.gains.coords['Antennas'].to_numpy()
