@@ -396,7 +396,7 @@ class xJones:
         StationNames=self.gains.coords['Antennas'].to_numpy()
         ### skymodel-like dtype
         cat_dtype = np.dtype([
-                            ('Name', np.str_, 200),
+                            ('Name', '|S200'),
                             ('ra', np.float32),
                             ('dec', np.float32),
                             ('SumI', np.float32),
@@ -414,16 +414,19 @@ class xJones:
             ClusterCat = np.asarray(self.gains.attrs["ClusterCat"], dtype=cat_dtype)
         else:
             ClusterCat=np.array(None, dtype=object)
-        # sourcecatsub
+        # sourcecatsub - this one can be empty!
         if "SourceCatSub" in self.gains.attrs:
-            SourceCatSub = np.asarray(self.gains.attrs["ClusterCat"], dtype=cat_dtype)
+            if self.gains.attrs["SourceCatSub"]==None:
+                SourceCatSub=np.array(None, dtype=object)
+            else:
+                SourceCatSub = np.asarray(self.gains.attrs["SourceCatSub"], dtype=cat_dtype)
         else:
             SourceCatSub=np.array(None, dtype=object)
         # modelname
         if "ModelName" in self.gains.attrs:
-            ModelName=np.array([self.gains.attrs["ModelName"]])
+            ModelName=np.array(self.gains.attrs["ModelName"])
         else:
-            ModelName=np.array([])
+            ModelName=np.array(None)
         # freqdomains
         ## read these from the freq coordinate axis
         nu0=self.gains.coords['gains_nu0'].values
