@@ -165,6 +165,15 @@ def test_to_dicosols_from_dicosols_with_missing_axes():
     with pytest.raises(MissingDicoSolsKey):
         test_xjones.to_dicosols('./tests/Data/test-sols-serialisation.npz')
 
+def test_to_dicosols_from_dicosols():
+    '''Test serialisation to dicosols object.'''
+    sols = "./tests/Data/killMS.CohJones.sols.npz"
+    test_xjones = xJones.from_dicosols(sols)
+    test_xjones.to_dicosols('./tests/Data/test-sols-serialisation.npz')
+
+
+
+
 
 def from_json():
     ...
