@@ -11,6 +11,8 @@ from time import time
 
 from data3gc.jones import xJones, validate_axis
 
+import pytest
+
 
 def test_xJones_initialisation_DI():
     '''Check initialisation with default behaviour, no directions provided.'''
@@ -114,7 +116,7 @@ def test_del_xjones_coords():
                          freqs=(np.arange(10)*1e6+120e6)<<u.Hz,
                          params=np.array(["I"]),
                          msname="some_msfile.ms",
-                         comments=np.array(["test adding a coordinate axis"])
+                         comments=np.array(["test remove a coordinate axis"])
     )
     test_xjones.del_coords("Freqs")
     assert "Freqs" not in test_xjones.gains._coord_names
@@ -129,7 +131,7 @@ def test_add_xjones_attr():
                          freqs=(np.arange(10)*1e6+120e6)<<u.Hz,
                          params=np.array(["I"]),
                          msname="some_msfile.ms",
-                         comments=np.array(["test adding a coordinate axis"])
+                         comments=np.array(["test adding an attribute axis"])
     )
     test_xjones.add_attr("test_attr","OK")
     assert "test_attr" in test_xjones.gains.attrs
@@ -144,7 +146,7 @@ def test_del_xjones_attr():
                          freqs=(np.arange(10)*1e6+120e6)<<u.Hz,
                          params=np.array(["I"]),
                          msname="some_msfile.ms",
-                         comments=np.array(["test adding a coordinate axis"])
+                         comments=np.array(["test removing an attribute"])
     )
     test_xjones.del_attr("msname")
     assert "msname" not in test_xjones.gains.attrs
@@ -154,12 +156,14 @@ def test_from_dicosols():
     sols = "./tests/Data/killMS.CohJones.sols.npz"
     test_xjones = xJones.from_dicosols(sols)
     
-def test_to_dicosols_from_dicosols():
-    '''Check serialisation to dicosols object.'''
+def test_to_dicosols_from_dicosols_with_missing_axes():
+    '''Check that serialisation to dicosols object raises the correct errors when necessary coordinates are missing.'''
     sols = "./tests/Data/killMS.CohJones.sols.npz"
     test_xjones = xJones.from_dicosols(sols)
-    print(test_xjones)
-    test_xjones.to_dicosols('./tests/Data/test-sols-serialisation.npz')
+    test_xjones.del_coords("Times")
+    from data3gc.jones import MissingDicoSolsKey
+    with pytest.raises(MissingDicoSolsKey):
+        test_xjones.to_dicosols('./tests/Data/test-sols-serialisation.npz')
 
 
 def from_json():

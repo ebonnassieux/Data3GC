@@ -52,6 +52,14 @@ def validate_axis(input_var,
         output_var = cast(u.Quantity, output_var << output_unit)
     return output_var
 
+class MissingDicoSolsKey(Exception):
+    """
+    Exception raised due to missing coordinates when serialising xJones as DicoSols.
+    """
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
 @define
 class xJones:
     gains: xr.Dataset
@@ -166,8 +174,6 @@ class xJones:
         attrs = self.gains.attrs
         del attrs[attrname]
         self.gains = self.gains.assign_attrs(attrs)
-
-
 
     @classmethod
     def from_dicosols(cls,
@@ -323,6 +329,18 @@ class xJones:
         :param filename: Provide a name for your DicoSols. Only used if write_to_file is True. xJones named is used if this is not provided.
         :type filename: str
         '''
+        ### check for the specific values we cannot autogenerate:
+        ### gains t0, t1, nu0, nu1. Return an exception if they
+        ### are missing.
+        # gain sols
+        if 'gains_t0' not in self.gains.coords:
+            raise MissingDicoSolsKey(f"Serialisation of {self.name} requires \'gains_t0\' coordinate.")
+        if 'gains_t1' not in self.gains.coords:
+            raise MissingDicoSolsKey(f"Serialisation of {self.name} requires \'gains_t1\' coordinate.")
+        if 'gains_nu0' not in self.gains.coords:
+            raise MissingDicoSolsKey(f"Serialisation of {self.name} requires \'gains_nu0\' coordinate.")
+        if 'gains_nu1' not in self.gains.coords:
+            raise MissingDicoSolsKey(f"Serialisation of {self.name} requires \'gains_nu1\' coordinate.")
         ### read values from DataSet, add defaults if missing.
         # msname
         MSName = np.array([self.msname])
@@ -331,7 +349,6 @@ class xJones:
             MSNameTime0=np.array(self.gains.attrs['t0'])
         else:
             MSNameTime0 = np.array([])
-        # gain sols
         Sols=np.ndarray([]),
         # station names
         ## get from attributes
@@ -358,17 +375,12 @@ class xJones:
             ModelName=np.array([])
         # freqdomains
         ## read these from the freq coordinate axis
-        if 'gains_nu0' in self.gains.coords:
-            # nu0, nu1 already computed and saved as coords
-            nu0=self.gains.coords['gaints_nu0'].values
-            nu1=self.gains.coords['gaints_nu1'].values
-            FreqDomains=np.array([nu0,nu1])
-        else:
-            # estimate nu0, nu1 as halfway points along freq.
-            freqs = self.gains.coords["Freqs"]
-            nu0=...
-            nu1=...
-            FreqDomains=np.array([nu0,nu1])
+        if 'gains_nu0' not in self.gains.coords:
+            ...
+        nu0=self.gains.coords['gains_nu0'].values
+        nu1=self.gains.coords['gains_nu1'].values
+        FreqDomains=np.array([nu0,nu1])
+        
         # beamtimes
         if "BeamTimes" in self.gains.attrs:
             BeamTimes=np.array([self.gains.attrs["BeamTimes"]])
