@@ -158,6 +158,8 @@ def test_to_dicosols():
     '''Check serialisation to dicosols object.'''
     ...
 
+def from_json():
+    ...
 
 def test_serialise_json():
     sols = "./tests/Data/killMS.CohJones.sols.npz"
@@ -165,8 +167,6 @@ def test_serialise_json():
     test_xjones.to_json("test.json",include_data=True)
 
 
-def from_json():
-    ...
 
 def from_h5parm():
     ...

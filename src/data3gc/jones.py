@@ -1,6 +1,6 @@
 # Defines Jones object properties.
 from __future__ import annotations
-from typing import Any, Optional, NotRequired, Protocol, Self, cast
+from typing import Any, Optional, NotRequired, Protocol, Self, cast, Tuple, TypeAlias, runtime_checkable
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 import numpy.typing
@@ -217,7 +217,7 @@ class xJones:
         stats_list = []
         for s in sols_struct:
             gains = s['G']     # shape (n_freqs, n_antennas, n_dirs, 2, 2)
-            stats = s['Stats'] # shape (n_freqs, n_antennas, n_dirs, 2, 2)
+            stats = s['Stats'] # shape (n_times, n_antennas, 4)
             gains_list.append(gains)
             stats_list.append(stats)
         gains = np.array(gains_list) # shape (n_times, n_freqs, n_ants, n_dirs, 2,2 )
@@ -267,6 +267,72 @@ class xJones:
 
         return output
 
+
+    def to_dicosols(self,
+                    return_dico:bool=True,
+                    write_to_file:bool=False,
+                    filename:str="") -> Optional[np.lib.npyio.NpzFile]:
+        '''
+        Function to convert this instance of an
+        xJones class to a DicoSols object. This object
+        can be written it to a file, with the default
+        using the xJones name as a DicoSols basename.
+        Otherwise, the function returns the DicoSols
+        to be manipulated in memory.
+
+        Description of a DicoSols object:
+          It is an NpzFile object containing multiple files.
+          These are, in order:
+            MSName: np.ndarray[np.str_]
+              contains the name of the MS these gains are derived from
+            MSNameTime0: np.ndarray[float]
+              contains the lowest time value of the MS for these gains, in MJDs
+            Sols: np.ndarray
+              contains the gain solutions. 
+              dtype=[('t0', '<f8'), 
+                     ('t1', '<f8'), 
+                     ('G', '<c8', (n_freqs, n_antennas, n_dirs, 2, 2)), 
+                     ('Stats', '<f4', (n_times, n_antennas, 4))]=
+            StationNames: np.ndarray[np.str_]
+              array of station name strings
+            SkyModel: np.ndarray
+              contains the pybdsf-like SkyModel array
+                dtype=[('Name', 'S200'), ('ra', '<f4'), ('dec', '<f4'), ('SumI', '<f4'), ('Cluster', '<i8'), ('l', '<f4'), ('m', '<f4')]
+            ClusterCat: np.ndarray
+              contains the pybdsf-like ClusterCat array
+                b'str', float, float, float, int, float, float
+                dtype=[('Name', 'S200'), ('ra', '<f4'), ('dec', '<f4'), ('SumI', '<f4'), ('Cluster', '<i8'), ('l', '<f4'), ('m', '<f4')]
+            SourceCatSub: np.ndarray[Object]
+              contains the catalog of sources to be subtracted during FreeFullSub
+            ModelName: np.ndarray[np.str_]
+              contains the filename for the model used to compute these gains
+            FreqDomains: np.ndarray[np.float64]
+              contains the nu0, nu1 values for the gains
+            BeamTimes: np.ndarray[np.float64]
+              contains the times at which the instrument beam values are computed
+
+        If DicoSols fields are missing from the xJones
+        object, they are filled with dummy values.
+        
+        :param self: xJones object
+        :param return_dico: Flag to return the DicoSols object. Defaults to True.
+        :type return_dico: bool
+        :param write_to_file: flag to write the DicoSols object to file. Defaults to False.
+        :type write_to_file: bool
+        :param filename: Provide a name for your DicoSols. Only used if write_to_file is True. xJones named is used if this is not provided.
+        :type filename: str
+        '''
+        # start by building the dicosols
+        dicosols=...
+
+        if write_to_file:
+            # build default filename if not provided
+            if filename=="":
+                ...
+            # write dicosols to npz
+            ...
+        if return_dico:
+            return dicosols
 
 
 ################### we are here ######################
@@ -376,7 +442,7 @@ class xJones:
             else:
                 jones_dict["coordinates"][coord_name] = str(coord)
 
-        # Serialize data variables
+        # Serialize data variables if requested
         if include_data==True:
             for var_name in self.gains.data_vars:
                 var = self.gains[var_name]
@@ -394,10 +460,10 @@ class xJones:
 
 
     def to_json(self,
-                     filename: str, 
-                     include_data:bool=False,
-                     overwrite:bool=True,
-                     indent:int=2) -> None:
+                filename: str, 
+                include_data:bool=False,
+                overwrite:bool=True,
+                indent:int=2) -> None:
         '''
          Serialise xJones object to JSON file.
         
@@ -417,7 +483,7 @@ class xJones:
         jones_dict = self.to_dict(include_data=include_data)
         with open(filepath, 'w') as f:
             json.dump(jones_dict, f, indent=indent)
-
+        
 
 def serialize_complex(arr:np.ndarray[Any]):
     '''
@@ -435,3 +501,159 @@ def serialize_complex(arr:np.ndarray[Any]):
             "_complex_": True
         }
     return arr.tolist()
+
+
+### build sols protocol
+@runtime_checkable
+class SolsArray(Protocol):
+    '''
+    Protocol describing the contents of DicoSols Sols
+    fields: t0, t1, G, Stats
+    '''
+    dtype: np.dtype
+
+    @property
+    def t0(self) -> np.typing.NDArray[np.float64]: ...
+    @property
+    def t1(self) -> np.typing.NDArray[np.float64]: ...
+    @property
+    def G(self) -> np.typing.NDArray[np.complex64]: ...
+    @property
+    def Stats(self) -> np.typing.NDArray[np.float32]: ...
+
+def validate_sols(arr:np.typing.NDArray[np.record]) -> bool:
+    """
+    Validate a numpy array conforms to Sols structure.
+    
+    
+    :param arr: Input DicoSols array to be validated
+    :type arr: np.typing.NDArray[np.record]
+    :return: True if DicoSols is compliant
+    :rtype: bool
+    """
+    return (arr.dtype.names == ('t0', 't1', 'G', 'Stats') and
+            arr.dtype['t0'] == np.float64 and
+            arr.dtype['t1'] == np.float64 and
+            arr.dtype['G'].kind == 'c' and  # complex
+            arr.dtype['Stats'].kind == 'f')  # float
+
+def DicoCatProtocol(Protocol):
+    '''
+    Protocol for DicoSols catalog-like structured array
+    fields: Name, ra, dec, SumI, Cluster, l, m
+    '''
+    dtype: np.dtype
+    @property
+    def Name(self) -> np.typing.NDArray[np.str_]: ...
+    @property
+    def ra(self) -> np.typing.NDArray[np.float32]: ...
+    @property
+    def dec(self) -> np.typing.NDArray[np.float32]: ...
+    @property
+    def SumI(self) -> np.typing.NDArray[np.float32]: ...
+    @property
+    def Cluster(self) -> np.typing.NDArray[np.int64]: ...
+    @property
+    def l(self) -> np.typing.NDArray[np.float32]: ...
+    @property
+    def m(self) -> np.typing.NDArray[np.float32]: ...
+
+def ValidateDicoCat(arr:np.typing.NDArray[np.record]) -> bool:
+    '''
+    Validator for DicoCat-like structured arrays
+    
+    :param arr: Input array to validate
+    :type arr: np.typing.NDArray[np.record]
+    :return: True if it's compliant
+    :rtype: bool
+    '''
+    return (arr.dtype.names == ('Name', 'ra', 'dec', 'SumI', 'Cluster', 'l', 'm') and
+            arr.dtype['Name'].kind == 'U' and  # unicode string
+            arr.dtype['ra'] == np.float32 and
+            arr.dtype['dec'] == np.float32 and
+            arr.dtype['SumI'] == np.float32 and
+            arr.dtype['Cluster'] == np.int64 and
+            arr.dtype['l'] == np.float32 and
+            arr.dtype['m'] == np.float32)
+
+def dicosols(MSName: np.typing.NDArray[np.str_],
+             MSNameTime0: np.typing.NDArray[np.float64],
+             Sols:np.typing.NDArray[np.record], # solstype
+             StationNames: np.typing.NDArray[np.str_],
+             SkyModel: np.typing.NDArray[np.record], # cattype
+             ClusterCat: np.typing.NDArray[np.record], # cattype
+             SourceCatSub: np.typing.NDArray[np.record], # cattype
+             ModelName: np.typing.NDArray[np.str_],
+             FreqDomains:np.typing.NDArray[np.float64],
+             BeamTimes: np.typing.NDArray[np.float64]
+             ):
+    
+    '''
+
+
+    dtype=[('Name', 'S200'), ('ra', '<f4'), ('dec', '<f4'), ('SumI', '<f4'), ('Cluster', '<i8'), ('l', '<f4'), ('m', '<f4')]
+
+    Builds a killMS DicoSols object out of its input ndarrays.
+    It is an NpzFile object containing multiple files, each of
+    which corresponds to one of the parameters listed, in order.
+    
+    :param MSName: contains the name of the MS these gains are derived from
+    :type MSName: np.ndarray[np.str_]
+    :param MSNameTime0: contains the lowest time value of the MS for these gains, in MJDs
+    :type MSNameTime0: np.ndarray[np.float64]
+    :param Sols: contains the gain solutions. 
+            dtype=[('t0', '<f8'), 
+                    ('t1', '<f8'), 
+                    ('G', '<c8', (n_freqs, n_antennas, n_dirs, 2, 2)), 
+                    ('Stats', '<f4', (n_times, n_antennas, 4))]
+    :type Sols: np.ndarray[np.float64, np.float64, np.ndarray[np.complex64,...], np.ndarray[np.float32,...]]
+    :param StationNames: array of station name strings
+    :type StationNames: np.ndarray[np.str_, ...]
+
+    :param SkyModel: contains the pybdsf-like SkyModel array
+    :type SkyModel: np.ndarray[...]
+    :param ClusterCat: contains the pybdsf-like ClusterCat array
+    :type ClusterCat: np.ndarray[...]
+    :param SourceCatSub: contains the catalog of sources to be subtracted during FreeFullSub
+    :type SourceCatSub: np.ndarray[...]
+
+    :param ModelName: contains the filename for the model used to compute these gains
+    :type ModelName: np.ndarray[np.str_]
+    :param FreqDomains: contains the nu0, nu1 values for the gains
+    :type FreqDomains: np.ndarray[np.float64, ...]
+    :param BeamTimes: contains the times at which the instrument beam values are computed
+    :type BeamTimes: np.ndarray[np.float64, ...]
+    
+    '''
+    
+    '''
+        These are, in order:
+        MSName: np.ndarray[np.str_]
+            contains the name of the MS these gains are derived from
+        MSNameTime0: np.ndarray[float]
+            contains the lowest time value of the MS for these gains, in MJDs
+        Sols: np.ndarray
+            contains the gain solutions. 
+            dtype=[('t0', '<f8'), 
+                    ('t1', '<f8'), 
+                    ('G', '<c8', (n_freqs, n_antennas, n_dirs, 2, 2)), 
+                    ('Stats', '<f4', (n_times, n_antennas, 4))]=
+        StationNames: np.ndarray[np.str_]
+            array of station name strings
+        SkyModel: np.ndarray
+            contains the pybdsf-like SkyModel array
+            dtype=[('Name', 'S200'), ('ra', '<f4'), ('dec', '<f4'), ('SumI', '<f4'), ('Cluster', '<i8'), ('l', '<f4'), ('m', '<f4')]
+        ClusterCat: np.ndarray
+            contains the pybdsf-like ClusterCat array
+            b'str', float, float, float, int, float, float
+            dtype=[('Name', 'S200'), ('ra', '<f4'), ('dec', '<f4'), ('SumI', '<f4'), ('Cluster', '<i8'), ('l', '<f4'), ('m', '<f4')]
+        SourceCatSub: np.ndarray[Object]
+            contains the catalog of sources to be subtracted during FreeFullSub
+        ModelName: np.ndarray[np.str_]
+            contains the filename for the model used to compute these gains
+        FreqDomains: np.ndarray[np.float64]
+            contains the nu0, nu1 values for the gains
+        BeamTimes: np.ndarray[np.float64]
+            contains the times at which the instrument beam values are computed
+    '''
+    
