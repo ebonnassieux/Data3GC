@@ -169,6 +169,7 @@ def test_to_dicosols_from_dicosols():
     '''Test serialisation to dicosols object.'''
     sols = "./tests/Data/killMS.CohJones.sols.npz"
     test_xjones = xJones.from_dicosols(sols)
+    print(test_xjones)
     test_xjones.to_dicosols('./tests/Data/test-sols-serialisation.npz')
 
 

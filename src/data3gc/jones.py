@@ -218,6 +218,7 @@ class xJones:
         # Sols has fields: t0, t1, G, Stats
         # t0 and t1 are scalar floats for each time slot
         # G has shape (n_freqs, n_antennas, n_dirs, 2, 2)  per time slot
+        # Stats has shape ....
         # We want shape (n_dirs, n_times, n_freqs, n_antennas, n_params)
         gains_list = []
         stats_list = []
@@ -349,7 +350,47 @@ class xJones:
             MSNameTime0=np.array(self.gains.attrs['t0'])
         else:
             MSNameTime0 = np.array([])
-        Sols=np.ndarray([]),
+        ### Reshape gain, stats values
+        # Sols has fields: t0, t1, G, Stats
+        # t0 and t1 are scalar floats for each time slot
+        # G has shape (n_freqs, n_antennas, n_dirs, 2, 2)  per time slot
+        # We want shape (n_dirs, n_times, n_freqs, n_antennas, n_params)
+        ## read t0, t1 from the time coordinate axis
+        t0=self.gains.coords['gains_t0'].values
+        t1=self.gains.coords['gains_t1'].values
+        # gains_list = []
+        # stats_list = []
+        # for s in sols_struct:
+        #     gains = s['G']     # shape (n_freqs, n_antennas, n_dirs, 2, 2)
+        #     stats = s['Stats'] # shape (n_times, n_antennas, 4)
+        #     gains_list.append(gains)
+        #     stats_list.append(stats)
+        # gains = np.array(gains_list) # shape (n_times, n_freqs, n_ants, n_dirs, 2,2 )
+        # stats = np.array(stats_list) # shape (n_times, n_freqs, n_ants, 4 )
+        # # reshape to xarray style
+        # gains = gains.transpose(3, 2, 0, 1, 4, 5).reshape(len(directions), len(station_names), len(times), len(freqs), 4)
+        # stats = stats.transpose(2, 0, 1, 3) # (len(station_names), len(times), len(freqs), 4)
+
+        # target gain shape in the dicosols:
+        # times, freqs, ants, corrs
+        Stats = self.gains[self.name+"_stats"].transpose('Times','Freqs','Antennas','Params').values
+        ntimes, nfreqs, nants, _ = Stats.shape
+        ndir = len(self.gains['Direction'])
+        # target gain shape in the dicosols:
+        # times, freqs, ants, dir, 2,2
+        G = self.gains[self.name+"_gains"].transpose('Times', 'Freqs','Antennas','Direction','Params').values.reshape(ntimes,nfreqs,nants,ndir,2,2)
+        # now that they're almost in good shape, split that shit along time axis
+        print()
+        print()
+        print()
+        print(G.shape)
+        print(Stats.shape)
+        print()
+        print()
+        print()
+
+
+        Sols=np.ndarray((t0, t1, G, Stats))
         # station names
         ## get from attributes
         StationNames=self.gains.coords['Antennas'].to_numpy()
@@ -375,12 +416,9 @@ class xJones:
             ModelName=np.array([])
         # freqdomains
         ## read these from the freq coordinate axis
-        if 'gains_nu0' not in self.gains.coords:
-            ...
         nu0=self.gains.coords['gains_nu0'].values
         nu1=self.gains.coords['gains_nu1'].values
         FreqDomains=np.array([nu0,nu1])
-        
         # beamtimes
         if "BeamTimes" in self.gains.attrs:
             BeamTimes=np.array([self.gains.attrs["BeamTimes"]])
