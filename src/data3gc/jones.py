@@ -344,7 +344,7 @@ class xJones:
             raise MissingDicoSolsKey(f"Serialisation of {self.name} requires \'gains_nu1\' coordinate.")
         ### read values from DataSet, add defaults if missing.
         # msname
-        MSName = np.array([self.msname])
+        MSName = np.array(self.msname)
         # t0
         if "t0" in self.gains.attrs:
             MSNameTime0=np.array(self.gains.attrs['t0'])
@@ -394,21 +394,31 @@ class xJones:
         # station names
         ## get from attributes
         StationNames=self.gains.coords['Antennas'].to_numpy()
+        ### skymodel-like dtype
+        cat_dtype = np.dtype([
+                            ('Name', np.str_, 200),
+                            ('ra', np.float32),
+                            ('dec', np.float32),
+                            ('SumI', np.float32),
+                            ('Cluster', np.int64),
+                            ('l', np.float32),
+                            ('m', np.float32)
+                            ])
         # skymodel
         if "SkyModel" in self.gains.attrs:
-            SkyModel = self.gains.attrs["SkyModel"]
+            SkyModel = np.asarray(self.gains.attrs["SkyModel"], dtype=cat_dtype)
         else:
-            SkyModel = np.array([])
+            SkyModel = np.array(None, dtype=object)
         # clustercat
         if "ClusterCat" in self.gains.attrs:
-            ClusterCat = self.gains.attrs["ClusterCat"]
+            ClusterCat = np.asarray(self.gains.attrs["ClusterCat"], dtype=cat_dtype)
         else:
-            ClusterCat=np.array([])
+            ClusterCat=np.array(None, dtype=object)
         # sourcecatsub
         if "SourceCatSub" in self.gains.attrs:
-            SourceCatSub = self.gains.attrs["SourceCatSub"]
+            SourceCatSub = np.asarray(self.gains.attrs["ClusterCat"], dtype=cat_dtype)
         else:
-            SourceCatSub=np.array([])
+            SourceCatSub=np.array(None, dtype=object)
         # modelname
         if "ModelName" in self.gains.attrs:
             ModelName=np.array([self.gains.attrs["ModelName"]])
@@ -438,10 +448,9 @@ class xJones:
 
         if write_to_file:
             # build default filename if not provided
-            if filename=="":
-                ...
-            # write dicosols to npz
-            ...
+            if filename!="":
+                filename = f"{self.name}.sols.npz"
+            np.savez(filename, **dico, pickle=True)
         if return_dico:
             return dico
 
@@ -691,7 +700,7 @@ def serialize_complex(arr:np.ndarray[Any]):
 
 def kMSDicoSols(MSName: np.typing.NDArray[np.str_],
              MSNameTime0: np.typing.NDArray[np.float64],
-             Sols:np.typing.NDArray[np.record], # solstype
+             Sols:np.typing.NDArray[np.void], # solstype
              StationNames: np.typing.NDArray[np.str_],
              SkyModel: np.typing.NDArray[np.record], # cattype
              ClusterCat: np.typing.NDArray[np.record], # cattype
@@ -743,7 +752,15 @@ def kMSDicoSols(MSName: np.typing.NDArray[np.str_],
     :type BeamTimes: np.ndarray[np.float64]
     
     '''
-    # check conformity for dicocats and sols
-    ...
-    # build npz-style dicosols
-    ...
+    return {
+        'MSName': MSName,
+        'MSNameTime0': MSNameTime0,
+        'Sols': Sols,
+        'StationNames': StationNames,
+        'SkyModel': SkyModel,
+        'ClusterCat': ClusterCat,
+        'SourceCatSub': SourceCatSub,
+        'ModelName': ModelName,
+        'FreqDomains': FreqDomains,
+        'BeamTimes': BeamTimes
+    }

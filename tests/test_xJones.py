@@ -168,10 +168,27 @@ def test_to_dicosols_from_dicosols_with_missing_axes():
 def test_to_dicosols_from_dicosols():
     '''Test serialisation to dicosols object.'''
     sols = "./tests/Data/killMS.CohJones.sols.npz"
+    orig = dict(np.load(sols,allow_pickle=True))
     test_xjones = xJones.from_dicosols(sols)
-    print(test_xjones)
-    test_xjones.to_dicosols('./tests/Data/test-sols-serialisation.npz')
+    new = test_xjones.to_dicosols('./tests/Data/test-sols-serialisation.npz',
+                                            return_dico=True,
+                                            write_to_file=True)
+    # Compare keys
+    assert set(orig.keys()) == set(new.keys()), "Different keys in npz files"
 
+    # Compare each array
+    for key in orig:
+        a, b = orig[key], new[key]
+        if isinstance(a, np.ndarray):
+            if a.dtype.names:  # Structured array
+                for field in a.dtype.names:
+                    assert a[field].shape == b[field].shape, f"{key}.{field} shape mismatch"
+                    np.testing.assert_array_almost_equal(a[field], b[field])
+            else:
+#                np.testing.assert_array_almost_equal(a, b)
+                assert np.array_equal(a,b), f"{key} differs: {a} != {b}"
+        else:
+            assert a == b, f"{key} differs: {a} != {b}"
 
 
 
