@@ -172,8 +172,11 @@ def test_to_dicosols_from_dicosols():
     test_xjones = xJones.from_dicosols(sols)
     testsols_name = './tests/Data/test-sols-serialisation.npz'
     new = test_xjones.to_dicosols(testsols_name,
-                                            return_dico=True,
-                                            write_to_file=True)
+                                    return_dico=True,
+                                    write_to_file=True)
+    # let type-checker know that both outputs are loaded
+    assert orig is not None
+    assert new is not None
     # Compare keys
     assert set(orig.keys()) == set(new.keys()), "Different keys in npz files"
 

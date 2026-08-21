@@ -436,7 +436,7 @@ class xJones:
         if "BeamTimes" in self.gains.attrs:
             BeamTimes=np.array(self.gains.attrs["BeamTimes"])
         else:
-            BeamTimes=np.array()
+            BeamTimes=np.array([])
         # then, build the dicosols
         dico = kMSDicoSols(MSName,
                            MSNameTime0,
@@ -705,9 +705,9 @@ def kMSDicoSols(MSName: np.typing.NDArray[np.str_],
              MSNameTime0: np.typing.NDArray[np.float64],
              Sols:np.typing.NDArray[np.void], # solstype
              StationNames: np.typing.NDArray[np.str_],
-             SkyModel: np.typing.NDArray[np.record], # cattype
-             ClusterCat: np.typing.NDArray[np.record], # cattype
-             SourceCatSub: np.typing.NDArray[np.record], # cattype
+             SkyModel: np.typing.NDArray[np.void] | np.typing.NDArray[np.record], # cattype
+             ClusterCat: np.typing.NDArray[np.void] | np.typing.NDArray[np.record], # cattype
+             SourceCatSub: np.typing.NDArray[np.void] | np.typing.NDArray[np.record], # cattype
              ModelName: np.typing.NDArray[np.str_],
              FreqDomains:np.typing.NDArray[np.float64],
              BeamTimes: np.typing.NDArray[np.float64]
