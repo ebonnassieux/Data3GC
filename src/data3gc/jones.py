@@ -426,17 +426,17 @@ class xJones:
         if "ModelName" in self.gains.attrs:
             ModelName=np.array(self.gains.attrs["ModelName"])
         else:
-            ModelName=np.array(None)
+            ModelName=np.array(NotImplemented)
         # freqdomains
         ## read these from the freq coordinate axis
         nu0=self.gains.coords['gains_nu0'].values
         nu1=self.gains.coords['gains_nu1'].values
-        FreqDomains=np.array([nu0,nu1])
+        FreqDomains=np.array([nu0,nu1]).transpose(1,0)
         # beamtimes
         if "BeamTimes" in self.gains.attrs:
-            BeamTimes=np.array([self.gains.attrs["BeamTimes"]])
+            BeamTimes=np.array(self.gains.attrs["BeamTimes"])
         else:
-            BeamTimes=np.array([])
+            BeamTimes=np.array()
         # then, build the dicosols
         dico = kMSDicoSols(MSName,
                            MSNameTime0,
