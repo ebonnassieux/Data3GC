@@ -457,78 +457,6 @@ class xJones:
         if return_dico:
             return dico
 
-
-################### we are here ######################
-#     def to_solsnpz(self,
-#                    filename):
-#         """Write to killMS sols.npz format."""
-#         fname = Path(filename).absolute().as_posix()
-        
-#         # Prepare the structured array for Sols
-#         # Sols has fields: t0, t1, G, Stats
-#         n_times = len(self.times)
-#         n_antennas = len(self.antennas)
-        
-#         # Create dtype for Sols structured array
-#         # G has shape (1, n_antennas, 1, 2, 2)
-#         # Stats has shape (1, n_antennas, 4) - we'll use zeros for now
-#         sol_dtype = np.dtype([
-#             ('t0', np.float64),
-#             ('t1', np.float64),
-#             ('G', np.complex64, (1, n_antennas, 1, 2, 2)),
-#             ('Stats', np.float32, (1, n_antennas, 4))
-#         ])
-        
-#         # Build Sols array
-#         sols_list = []
-#         for t_idx in range(n_times):
-#             t0 = self.gains_t0[t_idx]
-#             t1 = self.gains_t1[t_idx]
-            
-#             # Extract gains for this time slot: shape (n_antennas, 2, 2)
-#             g = self.gains[t_idx, :, :, :]  # shape (n_antennas, 2, 2)
-            
-#             # Reshape to (1, n_antennas, 1, 2, 2)
-#             g = g[np.newaxis, :, np.newaxis, :, :]  # shape (1, n_antennas, 1, 2, 2)
-            
-#             # Convert to complex64
-#             g = g.astype(np.complex64)
-            
-#             # Stats - use zeros for now
-#             stats = np.zeros((1, n_antennas, 4), dtype=np.float32)
-            
-#             sols_list.append((t0, t1, g, stats))
-        
-#         sols_array = np.array(sols_list, dtype=sol_dtype)
-        
-#         # Prepare other arrays
-#         # FreqDomains: shape (n_freqs, 2)
-#         if hasattr(self, 'freqs') and self.freqs is not None:
-#             if hasattr(self, 'gains_nu0') and hasattr(self, 'gains_nu1'):
-#                 freqs = np.stack([self.gains_nu0, self.gains_nu1], axis=1)
-#             else:
-#                 # Use freqs as center and create a small bandwidth
-#                 freqs = np.column_stack([self.freqs - 1e6, self.freqs + 1e6])
-#         else:
-#             freqs = np.array([[1.0e8, 2.0e8]], dtype=np.float64)  # default
-        
-#         # Save to npz file
-#         np.savez(
-#             fname,
-#             MSName=self.msname,
-#             MSNameTime0=np.float64(0.0),  # We don't have this info
-#             Sols=sols_array,
-#             StationNames=self.antennas,
-#             SkyModel=np.array([], dtype=object),  # Placeholder
-#             ClusterCat=np.array([], dtype=object),  # Placeholder
-#             SourceCatSub=np.array([], dtype=object),  # Placeholder
-#             ModelName=np.array(self.name, dtype='<U18'),
-#             FreqDomains=freqs,
-#             BeamTimes=np.array([], dtype=np.float64)
-#         )
-        
-#         return fname
-
     def to_dict(self, 
                 include_data:bool=False) -> dict:
         '''
@@ -575,13 +503,6 @@ class xJones:
                 }
         return jones_dict
 
-
-
-
-
-
-
-
     def to_json(self,
                 filename: str, 
                 include_data:bool=False,
@@ -624,82 +545,6 @@ def serialize_complex(arr:np.ndarray[Any]):
             "_complex_": True
         }
     return arr.tolist()
-
-
-# ### build sols protocol
-# @runtime_checkable
-# class SolsArrayProtocol(Protocol):
-#     '''
-#     Protocol describing the contents of DicoSols Sols
-#     fields: t0, t1, G, Stats
-#     '''
-#     dtype: np.dtype
-#     @property
-#     def t0(self) -> np.typing.NDArray[np.float64]: ...
-#     @property
-#     def t1(self) -> np.typing.NDArray[np.float64]: ...
-#     @property
-#     def G(self) -> np.typing.NDArray[np.complex64]: ...
-#     @property
-#     def Stats(self) -> np.typing.NDArray[np.float32]: ...
-
-# def validate_sols(arr:np.typing.NDArray[np.record]) -> bool:
-#     """
-#     Validate a numpy array conforms to Sols structure.
-    
-    
-#     :param arr: Input DicoSols array to be validated
-#     :type arr: np.typing.NDArray[np.record]
-#     :return: True if DicoSols is compliant
-#     :rtype: bool
-#     """
-#     return (arr.dtype.names == ('t0', 't1', 'G', 'Stats') and
-#             arr.dtype['t0'] == np.float64 and
-#             arr.dtype['t1'] == np.float64 and
-#             arr.dtype['G'].kind == 'c' and  # complex
-#             arr.dtype['Stats'].kind == 'f')  # float
-
-
-# ### build dicocat protocol
-# @runtime_checkable
-# def DicoCatProtocol(Protocol):
-#     '''
-#     Protocol for DicoSols catalog-like structured array
-#     fields: Name, ra, dec, SumI, Cluster, l, m
-#     '''
-#     dtype: np.dtype
-#     @property
-#     def Name(self) -> np.typing.NDArray[np.str_]: ...
-#     @property
-#     def ra(self) -> np.typing.NDArray[np.float32]: ...
-#     @property
-#     def dec(self) -> np.typing.NDArray[np.float32]: ...
-#     @property
-#     def SumI(self) -> np.typing.NDArray[np.float32]: ...
-#     @property
-#     def Cluster(self) -> np.typing.NDArray[np.int64]: ...
-#     @property
-#     def l(self) -> np.typing.NDArray[np.float32]: ...
-#     @property
-#     def m(self) -> np.typing.NDArray[np.float32]: ...
-
-# def ValidateDicoCat(arr:np.typing.NDArray[np.record]) -> bool:
-#     '''
-#     Validator for DicoCat-like structured arrays
-    
-#     :param arr: Input array to validate
-#     :type arr: np.typing.NDArray[np.record]
-#     :return: True if it's compliant
-#     :rtype: bool
-#     '''
-#     return (arr.dtype.names == ('Name', 'ra', 'dec', 'SumI', 'Cluster', 'l', 'm') and
-#             arr.dtype['Name'].kind == 'U' and  # unicode string
-#             arr.dtype['ra'] == np.float32 and
-#             arr.dtype['dec'] == np.float32 and
-#             arr.dtype['SumI'] == np.float32 and
-#             arr.dtype['Cluster'] == np.int64 and
-#             arr.dtype['l'] == np.float32 and
-#             arr.dtype['m'] == np.float32)
 
 def kMSDicoSols(MSName: np.typing.NDArray[np.str_],
              MSNameTime0: np.typing.NDArray[np.float64],
