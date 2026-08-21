@@ -451,8 +451,8 @@ class xJones:
 
         if write_to_file:
             # build default filename if not provided
-            if filename!="":
-                filename = f"{self.name}.sols.npz"
+            if filename=="":
+                filename = f"{self}.sols.npz"
             np.savez(filename, **dico, pickle=True)
         if return_dico:
             return dico

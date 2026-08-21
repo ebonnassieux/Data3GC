@@ -170,7 +170,8 @@ def test_to_dicosols_from_dicosols():
     sols = "./tests/Data/killMS.CohJones.sols.npz"
     orig = dict(np.load(sols,allow_pickle=True))
     test_xjones = xJones.from_dicosols(sols)
-    new = test_xjones.to_dicosols('./tests/Data/test-sols-serialisation.npz',
+    testsols_name = './tests/Data/test-sols-serialisation.npz'
+    new = test_xjones.to_dicosols(testsols_name,
                                             return_dico=True,
                                             write_to_file=True)
     # Compare keys
@@ -188,11 +189,18 @@ def test_to_dicosols_from_dicosols():
                     else:
                         np.testing.assert_array_equal(a[field], b[field])
             else:
-#                np.testing.assert_array_almost_equal(a, b)
                 assert np.array_equal(a,b), f"{key} differs: {a} != {b}"
         else:
             assert a == b, f"{key} differs: {a} != {b}"
-
+    # compare the files
+    ### all the below fail. ask about it.
+    # import os
+    # # SHA-256
+    # os.system(f"sha256sum {sols} {testsols_name}")
+    # # MD5
+    # os.system(f"md5sum {sols} {testsols_name}")
+    # # cmp for simple binary comparison
+    # os.system(f"cmp {sols} {testsols_name}")
 
 
 
